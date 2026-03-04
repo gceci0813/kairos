@@ -24,14 +24,14 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <div className="relative z-10">
           <div className="flex items-center gap-4 mb-3">
             <svg viewBox="0 0 40 40" fill="none" className="w-9 h-9 flex-shrink-0">
-              <circle cx="20" cy="20" r="17" fill="none" stroke="#2563EB" strokeWidth="1.5"/>
-              <line x1="20" y1="3" x2="20" y2="37" stroke="#2563EB" strokeWidth="0.6" opacity="0.5"/>
-              <line x1="3" y1="20" x2="37" y2="20" stroke="#2563EB" strokeWidth="0.6" opacity="0.5"/>
-              <circle cx="20" cy="20" r="3.5" fill="#2563EB" opacity="0.9"/>
+              <circle cx="20" cy="20" r="17" fill="none" stroke="#60A5FA" strokeWidth="1.5"/>
+              <line x1="20" y1="3" x2="20" y2="37" stroke="#60A5FA" strokeWidth="0.6" opacity="0.6"/>
+              <line x1="3" y1="20" x2="37" y2="20" stroke="#60A5FA" strokeWidth="0.6" opacity="0.6"/>
+              <circle cx="20" cy="20" r="3.5" fill="#3B82F6"/>
             </svg>
             <span className="font-display font-800 text-3xl tracking-[0.3em] text-white">KAIROS</span>
           </div>
-          <p className="font-mono-custom text-[0.6rem] tracking-[0.3em] uppercase text-[#3B82F6] opacity-70 ml-[52px]">
+          <p className="font-mono-custom text-[0.6rem] tracking-[0.3em] uppercase text-[#60A5FA] ml-[52px]">
             Geopolitical Intelligence Platform
           </p>
         </div>
@@ -40,13 +40,13 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <div className="relative z-10 space-y-10">
           {/* Status indicators */}
           <div>
-            <div className="font-mono-custom text-[0.58rem] tracking-[0.3em] uppercase text-[#475569] mb-4">
+            <div className="font-mono-custom text-[0.58rem] tracking-[0.3em] uppercase text-[#64748B] mb-4">
               System Status
             </div>
             {[
               { label: 'Intelligence feeds', color: '#16A34A', pulse: true },
-              { label: 'AI analysis engines', color: '#2563EB', pulse: false },
-              { label: 'Threat monitoring', color: '#2563EB', pulse: false },
+              { label: 'AI analysis engines', color: '#60A5FA', pulse: false },
+              { label: 'Threat monitoring', color: '#60A5FA', pulse: false },
             ].map(({ label, color, pulse }) => (
               <div key={label} className="flex items-center gap-2.5 mb-2.5">
                 <div
@@ -63,7 +63,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           <div className="border-t border-[#1E293B]" />
 
           {/* Quote */}
-          <blockquote className="border-l-2 border-[#2563EB] pl-5">
+          <blockquote className="border-l-2 border-[#3B82F6] pl-5">
             <p className="text-[#94A3B8] text-[0.9rem] leading-relaxed italic">
               "Intelligence is not about prediction — it's about reducing uncertainty at the margin."
             </p>
