@@ -14,7 +14,13 @@ function LoginForm() {
   const [resendSent, setResendSent]     = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const next = searchParams.get('next') ?? '/dashboard';
+  // Only allow relative internal paths — prevents open-redirect attacks.
+  // e.g. ?next=https://evil.com would silently redirect after login without this check.
+  function getSafeRedirect(v: string | null): string {
+    if (v && v.startsWith('/') && !v.startsWith('//')) return v;
+    return '/dashboard';
+  }
+  const next = getSafeRedirect(searchParams.get('next'));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

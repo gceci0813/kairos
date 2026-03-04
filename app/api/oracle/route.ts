@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { anthropic } from '@/lib/anthropic';
+import { getAuthenticatedUser } from '@/lib/supabase-server';
 
 export const runtime = 'nodejs';
 
 export async function POST(req: NextRequest) {
+  const { user, skip } = await getAuthenticatedUser();
+  if (!skip && !user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const { scenario, goal, context, horizon, stakeholders } = await req.json();
 
   if (!scenario || !stakeholders?.length) {
