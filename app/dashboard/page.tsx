@@ -30,7 +30,7 @@ function RiskBar({ value, trend }: { value: number; trend: string }) {
   const color = value > 70 ? '#DC2626' : value > 50 ? '#D97706' : '#16A34A';
   return (
     <div className="flex items-center gap-3">
-      <div className="flex-1 h-1 bg-[#0F172A] relative overflow-hidden">
+      <div className="flex-1 h-1 bg-[#E2E8F0] relative overflow-hidden">
         <div className="h-full transition-all duration-1000" style={{ width: `${value}%`, background: color }} />
       </div>
       <span className="font-mono-custom text-base w-8 text-right" style={{ color }}>{value}</span>
@@ -116,7 +116,7 @@ export default function DashboardPage() {
             </div>
             <span className="font-mono-custom text-[0.85rem] text-[#0284C7]">◈ SENTINEL</span>
           </div>
-          <div className="divide-y divide-[#0F172A]">
+          <div className="divide-y divide-[#E2E8F0]">
             {alerts.map((alert) => (
               <div key={alert.id} className="px-6 py-4 hover:bg-[#F1F5F9] transition-colors group cursor-pointer">
                 <div className="flex items-start justify-between gap-4">
@@ -187,7 +187,7 @@ export default function DashboardPage() {
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#0F172A]">
+            <tbody className="divide-y divide-[#E2E8F0]">
               {analyses.map((n, i) => (
                 <tr key={i} className="hover:bg-[#F1F5F9] transition-colors group">
                   <td className="px-6 py-4 text-[0.85rem] text-[#475569] group-hover:text-[#0F172A] max-w-xs transition-colors">
@@ -204,7 +204,7 @@ export default function DashboardPage() {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-24 h-1 bg-[#0F172A]">
+                      <div className="w-24 h-1 bg-[#E2E8F0]">
                         <div className="h-full bg-[#2563EB]" style={{ width: `${n.progress}%` }} />
                       </div>
                       <span className="font-mono-custom text-base text-[#475569]">{n.progress}%</span>

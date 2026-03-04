@@ -30,90 +30,93 @@ function LoginForm() {
   };
 
   return (
-    <>
+    <form onSubmit={handleSubmit} className="space-y-5">
       {error && (
-        <div className="mb-5 bg-red-50 border border-red-200 px-4 py-3 text-[0.8rem] text-red-700 font-mono-custom">
+        <div className="bg-red-50 border border-red-200 rounded px-4 py-3 text-sm text-red-700">
           {error}
         </div>
       )}
-      <form onSubmit={handleSubmit} className="space-y-5">
-        <div>
-          <label className="font-mono-custom text-[0.7rem] tracking-[0.2em] uppercase text-[#475569] block mb-2">
-            Email Address
-          </label>
-          <input
-            type="email"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            required
-            placeholder="your@email.com"
-            className="w-full bg-[#F8FAFC] border border-[#E2E8F0] text-[#0F172A] px-4 py-3 text-base focus:outline-none focus:border-[#2563EB] transition-colors placeholder:text-[#CBD5E1]"
-          />
-        </div>
-        <div>
-          <label className="font-mono-custom text-[0.7rem] tracking-[0.2em] uppercase text-[#475569] block mb-2">
+      <div>
+        <label className="block text-[0.78rem] font-medium text-[#374151] mb-1.5">
+          Email address
+        </label>
+        <input
+          type="email"
+          value={email}
+          onChange={e => setEmail(e.target.value)}
+          required
+          autoComplete="email"
+          placeholder="analyst@organization.gov"
+          className="w-full bg-white border border-[#D1D5DB] text-[#111827] rounded-md px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-transparent transition placeholder:text-[#9CA3AF]"
+        />
+      </div>
+      <div>
+        <div className="flex items-center justify-between mb-1.5">
+          <label className="block text-[0.78rem] font-medium text-[#374151]">
             Password
           </label>
-          <input
-            type="password"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            required
-            placeholder="••••••••"
-            className="w-full bg-[#F8FAFC] border border-[#E2E8F0] text-[#0F172A] px-4 py-3 text-base focus:outline-none focus:border-[#2563EB] transition-colors placeholder:text-[#CBD5E1]"
-          />
         </div>
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full font-mono-custom text-[0.75rem] tracking-[0.2em] uppercase bg-[#2563EB] text-white py-4 hover:bg-[#3B82F6] transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-700">
-          {loading ? 'Authenticating...' : 'Access Platform →'}
-        </button>
-      </form>
-    </>
+        <input
+          type="password"
+          value={password}
+          onChange={e => setPassword(e.target.value)}
+          required
+          autoComplete="current-password"
+          placeholder="••••••••"
+          className="w-full bg-white border border-[#D1D5DB] text-[#111827] rounded-md px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-transparent transition placeholder:text-[#9CA3AF]"
+        />
+      </div>
+      <button
+        type="submit"
+        disabled={loading}
+        className="w-full bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-sm font-semibold rounded-md py-2.5 transition-colors disabled:opacity-60 disabled:cursor-not-allowed mt-2">
+        {loading ? 'Authenticating...' : 'Sign In'}
+      </button>
+    </form>
   );
 }
 
 export default function LoginPage() {
   return (
     <div>
-      <div className="text-center mb-10">
-        <Link href="/" className="inline-flex items-center gap-3 group">
-          <svg viewBox="0 0 32 32" fill="none" className="w-8 h-8">
+      {/* Mobile logo */}
+      <div className="lg:hidden text-center mb-10">
+        <Link href="/" className="inline-flex items-center gap-3">
+          <svg viewBox="0 0 32 32" fill="none" className="w-7 h-7">
             <circle cx="16" cy="16" r="13" fill="none" stroke="#2563EB" strokeWidth="1.5"/>
             <line x1="16" y1="3" x2="16" y2="29" stroke="#2563EB" strokeWidth="0.5" opacity="0.6"/>
             <line x1="3" y1="16" x2="29" y2="16" stroke="#2563EB" strokeWidth="0.5" opacity="0.6"/>
             <circle cx="16" cy="16" r="3" fill="#2563EB" opacity="0.8"/>
           </svg>
-          <span className="font-display font-800 text-2xl tracking-[0.2em] text-[#0F172A]">KAIROS</span>
+          <span className="font-display font-800 text-xl tracking-[0.2em] text-[#0F172A]">KAIROS</span>
         </Link>
-        <p className="mt-3 font-mono-custom text-[0.65rem] tracking-[0.25em] uppercase text-[#64748B]">
-          Secure Platform Access
+      </div>
+
+      {/* Heading */}
+      <div className="mb-8">
+        <h1 className="font-display font-800 text-[1.75rem] text-[#0F172A] mb-2 tracking-tight">
+          Sign in to KAIROS
+        </h1>
+        <p className="text-sm text-[#6B7280]">
+          Enter your credentials to access the intelligence platform.
         </p>
       </div>
 
-      <div className="bg-white border border-[#E2E8F0] p-8 shadow-sm">
-        <div className="mb-8">
-          <h1 className="font-display font-800 text-2xl text-[#0F172A] mb-1">Sign In</h1>
-          <p className="text-[0.85rem] text-[#64748B]">Access your intelligence dashboard</p>
-        </div>
+      <Suspense fallback={<div className="text-sm text-[#9CA3AF]">Loading...</div>}>
+        <LoginForm />
+      </Suspense>
 
-        <Suspense fallback={<div className="text-[0.8rem] text-[#94A3B8]">Loading...</div>}>
-          <LoginForm />
-        </Suspense>
-
-        <div className="mt-6 pt-6 border-t border-[#E2E8F0] text-center">
-          <p className="text-[0.8rem] text-[#64748B]">
-            No account?{' '}
-            <Link href="/auth/signup" className="text-[#2563EB] hover:text-[#3B82F6] transition-colors">
-              Request Access
-            </Link>
-          </p>
-        </div>
+      <div className="mt-6 text-center">
+        <p className="text-sm text-[#6B7280]">
+          No account?{' '}
+          <Link href="/auth/signup" className="text-[#2563EB] hover:text-[#1D4ED8] font-medium transition-colors">
+            Request access
+          </Link>
+        </p>
       </div>
 
-      <p className="mt-6 text-center font-mono-custom text-[0.6rem] tracking-[0.15em] text-[#CBD5E1]">
-        RESTRICTED ACCESS · KAIROS INTELLIGENCE PLATFORM
+      <p className="mt-10 text-center font-mono-custom text-[0.6rem] tracking-[0.15em] uppercase text-[#D1D5DB]">
+        Restricted · KAIROS Intelligence Platform
       </p>
     </div>
   );
