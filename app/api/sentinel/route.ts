@@ -1,13 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { anthropic } from '@/lib/anthropic';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
+import { getUserRole, canGenerateAnalysis } from '@/lib/rbac';
+import { logAuditEvent } from '@/lib/audit';
 
 export const runtime = 'nodejs';
 
 export async function POST(req: NextRequest) {
+  // ── Auth ──────────────────────────────────────────────────
   const { user, skip } = await getAuthenticatedUser();
   if (!skip && !user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  // ── Role check ───────────────────────────────────────────
+  if (!skip && user) {
+    const role = await getUserRole(user.id);
+    if (!canGenerateAnalysis(role)) {
+      return NextResponse.json(
+        { error: 'Forbidden: your account is read-only. Contact an administrator.' },
+        { status: 403 },
+      );
+    }
   }
 
   const { query, region, actors, horizon, context } = await req.json();
@@ -15,6 +29,20 @@ export async function POST(req: NextRequest) {
   if (!query) {
     return NextResponse.json({ error: 'Query is required.' }, { status: 400 });
   }
+
+  // ── Audit log ─────────────────────────────────────────────
+  await logAuditEvent({
+    user_id:    user?.id,
+    user_email: user?.email,
+    module:     'sentinel',
+    action:     'query',
+    input_summary: {
+      query_preview: typeof query === 'string' ? query.slice(0, 200) : null,
+      region:  region  ?? null,
+      actors:  actors  ?? null,
+      horizon: horizon ?? null,
+    },
+  });
 
   const prompt = `You are a geopolitical early warning analyst with deep expertise in PMESII (Political, Military, Economic, Social, Information, Infrastructure) domain analysis. Provide a structured intelligence forecast and risk assessment.
 

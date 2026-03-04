@@ -1,13 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { anthropic } from '@/lib/anthropic';
 import { getAuthenticatedUser } from '@/lib/supabase-server';
+import { getUserRole, canGenerateAnalysis } from '@/lib/rbac';
+import { logAuditEvent } from '@/lib/audit';
 
 export const runtime = 'nodejs';
 
 export async function POST(req: NextRequest) {
+  // ── Auth ──────────────────────────────────────────────────
   const { user, skip } = await getAuthenticatedUser();
   if (!skip && !user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  // ── Role check ───────────────────────────────────────────
+  if (!skip && user) {
+    const role = await getUserRole(user.id);
+    if (!canGenerateAnalysis(role)) {
+      return NextResponse.json(
+        { error: 'Forbidden: your account is read-only. Contact an administrator.' },
+        { status: 403 },
+      );
+    }
   }
 
   const { scenario, goal, context, horizon, stakeholders } = await req.json();
@@ -15,6 +29,20 @@ export async function POST(req: NextRequest) {
   if (!scenario || !stakeholders?.length) {
     return NextResponse.json({ error: 'Scenario and stakeholders are required.' }, { status: 400 });
   }
+
+  // ── Audit log ─────────────────────────────────────────────
+  await logAuditEvent({
+    user_id:    user?.id,
+    user_email: user?.email,
+    module:     'oracle',
+    action:     'query',
+    input_summary: {
+      scenario,
+      goal:        goal ?? null,
+      horizon:     horizon ?? null,
+      stakeholder_count: Array.isArray(stakeholders) ? stakeholders.length : 0,
+    },
+  });
 
   const stakeholderText = stakeholders.map((s: {
     name: string; role: string; org: string;

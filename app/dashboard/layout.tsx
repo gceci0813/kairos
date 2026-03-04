@@ -1,10 +1,11 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { createBrowserClient } from '@/lib/supabase';
 
-// SVG icon components
+// ── SVG icons ──────────────────────────────────────────────────────────────────
+
 function IconGrid() {
   return (
     <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
@@ -66,6 +67,13 @@ function IconSignal() {
     </svg>
   );
 }
+function IconShield() {
+  return (
+    <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+      <path fillRule="evenodd" d="M9.661 2.237a.531.531 0 01.678 0 11.947 11.947 0 007.078 2.749.5.5 0 01.479.425c.069.52.104 1.05.104 1.589 0 5.162-3.26 9.563-7.834 11.256a.48.48 0 01-.332 0C5.26 16.563 2 12.162 2 7c0-.538.035-1.069.104-1.589a.5.5 0 01.48-.425 11.947 11.947 0 007.077-2.749zm4.196 5.954a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
+    </svg>
+  );
+}
 function IconLogout() {
   return (
     <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
@@ -85,21 +93,61 @@ function IconChevron({ right }: { right: boolean }) {
   );
 }
 
-const navItems = [
-  { label: 'Overview', href: '/dashboard', Icon: IconGrid },
-  { label: 'ORACLE', href: '/dashboard/oracle', Icon: IconChart, sub: 'Strategy Navigator' },
-  { label: 'SENTINEL', href: '/dashboard/sentinel', Icon: IconEye, sub: 'Horizon Watch' },
-  { label: 'ACTOR', href: '/dashboard/actor', Icon: IconUser, sub: 'Intelligence Module' },
-  { label: 'Live Feeds', href: '/dashboard/live', Icon: IconSignal, sub: 'Real-Time Intel Hub' },
-  { label: 'Signals', href: '/dashboard/map', Icon: IconGlobe, sub: 'Early Warning System' },
-  { label: 'Reports', href: '/dashboard/reports', Icon: IconDoc },
-  { label: 'Settings', href: '/dashboard/settings', Icon: IconCog },
+// ── Nav items ──────────────────────────────────────────────────────────────────
+
+const baseNavItems = [
+  { label: 'Overview',  href: '/dashboard',          Icon: IconGrid                               },
+  { label: 'ORACLE',    href: '/dashboard/oracle',   Icon: IconChart,  sub: 'Strategy Navigator'  },
+  { label: 'SENTINEL',  href: '/dashboard/sentinel', Icon: IconEye,    sub: 'Horizon Watch'        },
+  { label: 'ACTOR',     href: '/dashboard/actor',    Icon: IconUser,   sub: 'Intelligence Module'  },
+  { label: 'Live Feeds',href: '/dashboard/live',     Icon: IconSignal, sub: 'Real-Time Intel Hub'  },
+  { label: 'Signals',   href: '/dashboard/map',      Icon: IconGlobe,  sub: 'Early Warning System' },
+  { label: 'Reports',   href: '/dashboard/reports',  Icon: IconDoc                                },
+  { label: 'Settings',  href: '/dashboard/settings', Icon: IconCog                                },
 ];
 
+const adminNavItem = {
+  label: 'Admin',
+  href:  '/dashboard/admin',
+  Icon:  IconShield,
+  sub:   'Audit & Access Control',
+};
+
+// ── Role display helpers ───────────────────────────────────────────────────────
+
+const ROLE_BADGE: Record<string, string> = {
+  admin:   'bg-red-100 text-red-700',
+  analyst: 'bg-blue-100 text-blue-700',
+  viewer:  'bg-slate-100 text-slate-600',
+};
+
+// ── Layout component ───────────────────────────────────────────────────────────
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-  const router = useRouter();
+  const pathname  = usePathname();
+  const router    = useRouter();
   const [collapsed, setCollapsed] = useState(false);
+  const [role, setRole] = useState<string>('analyst');
+  const [userEmail, setUserEmail] = useState<string>('');
+
+  // Fetch user's role on mount
+  useEffect(() => {
+    fetch('/api/admin/user-role')
+      .then(r => r.json())
+      .then(d => {
+        if (d.role)  setRole(d.role);
+        if (d.email) setUserEmail(d.email);
+      })
+      .catch(() => { /* silent — default stays 'analyst' */ });
+  }, []);
+
+  const navItems = role === 'admin'
+    ? [...baseNavItems, adminNavItem]
+    : baseNavItems;
+
+  const initials = userEmail
+    ? userEmail.slice(0, 2).toUpperCase()
+    : 'K';
 
   async function signOut() {
     const supabase = createBrowserClient();
@@ -113,7 +161,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Sidebar */}
       <aside className={`${collapsed ? 'w-[60px]' : 'w-[240px]'} flex-shrink-0 bg-white border-r border-[#E2E8F0] flex flex-col transition-all duration-200 shadow-sm`}>
         {/* Logo */}
-        <div className={`h-[60px] border-b border-[#E2E8F0] flex items-center gap-3 px-4`}>
+        <div className="h-[60px] border-b border-[#E2E8F0] flex items-center gap-3 px-4">
           <svg viewBox="0 0 32 32" fill="none" className="w-6 h-6 flex-shrink-0">
             <circle cx="16" cy="16" r="13" fill="none" stroke="#2563EB" strokeWidth="1.5"/>
             <line x1="16" y1="3" x2="16" y2="29" stroke="#2563EB" strokeWidth="0.5" opacity="0.6"/>
@@ -131,8 +179,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 py-4 px-2 space-y-0.5">
+        <nav className="flex-1 py-4 px-2 space-y-0.5 overflow-y-auto">
           {navItems.map(({ label, href, Icon, sub }) => {
+            const isAdmin  = href === '/dashboard/admin';
             const active = pathname === href || (href !== '/dashboard' && pathname.startsWith(href));
             return (
               <Link
@@ -143,13 +192,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   collapsed ? 'px-3 py-2.5 justify-center' : 'px-3 py-2.5'
                 } ${
                   active
-                    ? 'bg-[#EFF6FF] text-[#1D4ED8]'
-                    : 'text-[#475569] hover:text-[#0F172A] hover:bg-[#F8FAFC]'
+                    ? isAdmin
+                      ? 'bg-red-50 text-red-700'
+                      : 'bg-[#EFF6FF] text-[#1D4ED8]'
+                    : isAdmin
+                      ? 'text-red-600 hover:text-red-700 hover:bg-red-50'
+                      : 'text-[#475569] hover:text-[#0F172A] hover:bg-[#F8FAFC]'
                 }`}>
                 <Icon />
                 {!collapsed && (
                   <div className="min-w-0">
-                    <div className={`text-[0.8rem] font-semibold leading-tight ${active ? 'text-[#1D4ED8]' : ''}`}>
+                    <div className={`text-[0.8rem] font-semibold leading-tight ${active ? (isAdmin ? 'text-red-700' : 'text-[#1D4ED8]') : ''}`}>
                       {label}
                     </div>
                     {sub && (
@@ -177,11 +230,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           ) : (
             <div className="flex items-center gap-2.5">
               <div className="w-7 h-7 rounded-full bg-[#DBEAFE] border border-[#BFDBFE] flex items-center justify-center flex-shrink-0">
-                <span className="text-[0.6rem] font-bold text-[#2563EB]">K</span>
+                <span className="text-[0.6rem] font-bold text-[#2563EB]">{initials}</span>
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-[0.75rem] font-semibold text-[#0F172A] truncate">Analyst</div>
-                <div className="text-[0.65rem] text-[#94A3B8]">Active session</div>
+                <div className="text-[0.75rem] font-semibold text-[#0F172A] truncate">
+                  {userEmail || 'Analyst'}
+                </div>
+                <div className={`text-[0.6rem] font-bold px-1.5 py-0.5 rounded-full inline-block mt-0.5 ${ROLE_BADGE[role] ?? ROLE_BADGE.analyst}`}>
+                  {role.toUpperCase()}
+                </div>
               </div>
               <button
                 onClick={signOut}
