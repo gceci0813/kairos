@@ -56,7 +56,7 @@ export default function SignupPage() {
   return (
     <div>
       {/* Mobile logo */}
-      <div className="lg:hidden text-center mb-10">
+      <div className="auth-mobile-logo text-center mb-10">
         <Link href="/" className="inline-flex items-center gap-3">
           <svg viewBox="0 0 32 32" fill="none" className="w-7 h-7">
             <circle cx="16" cy="16" r="13" fill="none" stroke="#2563EB" strokeWidth="1.5"/>

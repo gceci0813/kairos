@@ -1,8 +1,14 @@
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen flex">
+      <style>{`
+        .auth-left-panel { display: none; }
+        @media (min-width: 1024px) { .auth-left-panel { display: flex; } }
+        .auth-mobile-logo { display: block; }
+        @media (min-width: 1024px) { .auth-mobile-logo { display: none; } }
+      `}</style>
       {/* Left branding panel — hidden on mobile */}
-      <div className="hidden lg:flex lg:w-[44%] bg-[#0F172A] flex-col justify-between p-14 relative overflow-hidden">
+      <div className="auth-left-panel w-[44%] bg-[#0F172A] flex-col justify-between p-14 relative overflow-hidden">
         {/* Subtle grid */}
         <div className="absolute inset-0" style={{
           backgroundImage:
