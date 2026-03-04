@@ -1,8 +1,9 @@
-import { createClient } from '@supabase/supabase-js';
+import { createBrowserClient as createSSRBrowserClient } from '@supabase/ssr';
 
-// Browser client — call inside components/handlers, not at module level
+// Use @supabase/ssr's browser client — stores session in cookies (not localStorage)
+// so the server-side middleware can read the session and auth works correctly.
 export function createBrowserClient() {
-  return createClient(
+  return createSSRBrowserClient(
     (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').trim(),
     (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '').trim()
   );
