@@ -1,8 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap');
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 :root {
   --bg:      #F8FAFC;
@@ -23,15 +21,16 @@
   --warn:    #D97706;
 }
 
-* { box-sizing: border-box; }
-html { scroll-behavior: smooth; font-size: 17px; }
-
-body {
-  background-color: var(--bg);
-  color: var(--text);
-  font-family: 'Inter', sans-serif;
-  -webkit-font-smoothing: antialiased;
-  overflow-x: hidden;
+@layer base {
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; font-size: 17px; }
+  body {
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
 }
 
 .font-display { font-family: 'Syne', sans-serif; }
