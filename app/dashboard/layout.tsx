@@ -92,6 +92,13 @@ function IconChevron({ right }: { right: boolean }) {
     </svg>
   );
 }
+function IconCard() {
+  return (
+    <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+      <path fillRule="evenodd" d="M2.5 4A1.5 1.5 0 001 5.5v1h18v-1A1.5 1.5 0 0017.5 4h-15zM19 8.5H1V14a1.5 1.5 0 001.5 1.5h15A1.5 1.5 0 0019 14V8.5zM3 13.25a.75.75 0 01.75-.75h1.5a.75.75 0 010 1.5h-1.5a.75.75 0 01-.75-.75zm4.25-.75a.75.75 0 000 1.5h3.5a.75.75 0 000-1.5h-3.5z" clipRule="evenodd" />
+    </svg>
+  );
+}
 
 // ── Nav items ──────────────────────────────────────────────────────────────────
 
@@ -103,6 +110,7 @@ const baseNavItems = [
   { label: 'Live Feeds',href: '/dashboard/live',     Icon: IconSignal, sub: 'Real-Time Intel Hub'  },
   { label: 'Signals',   href: '/dashboard/map',      Icon: IconGlobe,  sub: 'Early Warning System' },
   { label: 'Reports',   href: '/dashboard/reports',  Icon: IconDoc                                },
+  { label: 'Profile',   href: '/dashboard/profile',  Icon: IconCard, sub: 'My Account & Activity' },
   { label: 'Settings',  href: '/dashboard/settings', Icon: IconCog                                },
 ];
 
