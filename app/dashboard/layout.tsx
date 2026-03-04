@@ -48,6 +48,17 @@ function IconCog() {
     </svg>
   );
 }
+function IconSignal() {
+  return (
+    <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+      <path d="M16.364 3.636a1 1 0 00-1.414 1.414 7 7 0 010 9.9 1 1 0 001.414 1.414 9 9 0 000-12.728z" />
+      <path d="M13.536 6.464a1 1 0 00-1.414 1.414 3 3 0 010 4.243 1 1 0 001.414 1.414 5 5 0 000-7.07z" />
+      <path d="M5.05 6.464A1 1 0 003.636 7.88a5 5 0 000 7.07 1 1 0 001.414-1.414 3 3 0 010-4.243A1 1 0 005.05 6.464z" />
+      <path d="M2.222 3.636A1 1 0 00.808 5.05a9 9 0 000 12.728 1 1 0 001.414-1.414 7 7 0 010-9.9 1 1 0 000-1.414l-.001-.414z" />
+      <circle cx="10" cy="10" r="2" />
+    </svg>
+  );
+}
 function IconLogout() {
   return (
     <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
@@ -72,6 +83,7 @@ const navItems = [
   { label: 'ORACLE', href: '/dashboard/oracle', Icon: IconChart, sub: 'Strategy Navigator' },
   { label: 'SENTINEL', href: '/dashboard/sentinel', Icon: IconEye, sub: 'Horizon Watch' },
   { label: 'ACTOR', href: '/dashboard/actor', Icon: IconUser, sub: 'Intelligence Module' },
+  { label: 'Live Feeds', href: '/dashboard/live', Icon: IconSignal, sub: 'Real-Time Intel Hub' },
   { label: 'Reports', href: '/dashboard/reports', Icon: IconDoc },
   { label: 'Settings', href: '/dashboard/settings', Icon: IconCog },
 ];
