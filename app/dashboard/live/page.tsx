@@ -348,10 +348,19 @@ const TAG_COLORS: Record<string, { bg: string; text: string; border: string }> =
   RF:       { bg: '#2E1065', text: '#D8B4FE', border: '#A855F7' },
 };
 
-/* ─── Iframe viewer (for sources that allow embedding) ───────────── */
+/* ─── Feed viewer ────────────────────────────────────────────────── */
+// Sources that natively allow embedding load directly.
+// Sources that block embedding (X-Frame-Options / CSP) are routed through
+// /api/proxy, which strips those headers and injects a <base> tag so that
+// relative URLs inside the page resolve back to the origin domain.
 
 function FeedViewer({ source }: { source: Source }) {
   const [loaded, setLoaded] = useState(false);
+
+  // Choose URL: known-embeddable → direct; blocked → server proxy
+  const iframeSrc = source.embeds
+    ? source.url
+    : `/api/proxy?url=${encodeURIComponent(source.url)}&name=${encodeURIComponent(source.name)}`;
 
   useEffect(() => { setLoaded(false); }, [source.url]);
 
@@ -359,11 +368,14 @@ function FeedViewer({ source }: { source: Source }) {
     <div className="relative w-full h-full bg-[#080D18]">
       <iframe
         key={source.url}
-        src={source.url}
+        src={iframeSrc}
         className={`w-full h-full border-0 transition-opacity duration-500 ${loaded ? 'opacity-100' : 'opacity-0'}`}
         allowFullScreen
         title={source.name}
         onLoad={() => setLoaded(true)}
+        {...(!source.embeds && {
+          sandbox: 'allow-scripts allow-forms allow-modals allow-pointer-lock allow-downloads allow-presentation',
+        })}
       />
 
       {!loaded && (
@@ -389,58 +401,6 @@ function FeedViewer({ source }: { source: Source }) {
   );
 }
 
-/* ─── In-app card (for sources that block embedding) ─────────────── */
-
-function InAppCard({ source }: { source: Source }) {
-  const tagStyle = source.tag ? TAG_COLORS[source.tag] : null;
-  return (
-    <div className="flex items-center justify-center w-full h-full bg-[#080D18] p-8">
-      <div className="max-w-md w-full">
-        <div className="flex items-center gap-3 mb-6">
-          <div
-            className="w-3 h-3 rounded-full flex-shrink-0"
-            style={{
-              background: source.live ? '#DC2626' : '#64748B',
-              boxShadow: source.live ? '0 0 8px #DC2626' : 'none',
-              animation: source.live ? 'pulse 2s infinite' : 'none',
-            }}
-          />
-          {source.tag && tagStyle && (
-            <span
-              className="text-[10px] font-bold tracking-widest uppercase px-2 py-0.5 rounded border"
-              style={{ color: tagStyle.text, background: tagStyle.bg, borderColor: tagStyle.border }}
-            >
-              {source.tag}
-            </span>
-          )}
-          <span className="text-xs text-[#64748B] font-mono ml-auto">EMBED RESTRICTED</span>
-        </div>
-
-        <h2 className="text-2xl font-bold text-white mb-2 tracking-tight">{source.name}</h2>
-        <p className="text-sm text-[#94A3B8] mb-6 leading-relaxed">{source.detail}</p>
-
-        <div className="bg-[#0F172A] border border-[#1E293B] rounded-lg px-4 py-3 mb-6 flex items-center gap-3">
-          <div className="w-2 h-2 rounded-full bg-[#16A34A] flex-shrink-0" />
-          <span className="text-xs text-[#475569] font-mono truncate">{source.url}</span>
-        </div>
-
-        <button
-          onClick={() => { window.location.href = source.url; }}
-          className="flex items-center justify-center gap-3 w-full bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-semibold text-sm rounded-lg py-4 transition-colors shadow-lg shadow-blue-900/30"
-        >
-          <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-            <path d="M10 12.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z" />
-            <path fillRule="evenodd" d="M.664 10.59a1.651 1.651 0 010-1.186A10.004 10.004 0 0110 3c4.257 0 7.893 2.66 9.336 6.41.147.381.146.804 0 1.186A10.004 10.004 0 0110 17c-4.257 0-7.893-2.66-9.336-6.41zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
-          </svg>
-          Open {source.name}
-        </button>
-        <p className="text-xs text-[#334155] text-center mt-4">
-          This site restricts inline embedding — press browser Back to return to Kairos.
-        </p>
-      </div>
-    </div>
-  );
-}
 
 function EmptySlot({ slotNum, onActivate }: { slotNum: number; onActivate: () => void }) {
   return (
@@ -604,11 +564,6 @@ export default function LiveFeedsPage() {
                               {src.tag}
                             </span>
                           )}
-                          {!src.embeds && (
-                            <svg viewBox="0 0 12 12" fill="currentColor" className="w-3 h-3 text-[#CBD5E1] flex-shrink-0">
-                              <path fillRule="evenodd" d="M3.25 3a.75.75 0 000 1.5h1.19l-3.72 3.72a.75.75 0 001.06 1.06L5.5 5.56v1.19a.75.75 0 001.5 0v-3a.75.75 0 00-.75-.75h-3z" clipRule="evenodd" />
-                            </svg>
-                          )}
                         </div>
                       </div>
                       <p className="text-[11px] text-[#94A3B8] leading-relaxed line-clamp-2">{src.desc}</p>
@@ -621,7 +576,7 @@ export default function LiveFeedsPage() {
             {/* Footer note */}
             <div className="px-4 py-4 border-t border-[#F1F5F9]">
               <p className="text-[10px] text-[#CBD5E1] leading-relaxed">
-                All sources are publicly accessible open-source data. Sources that restrict inline embedding will navigate to the feed directly.
+                All sources are publicly accessible open-source data. Feeds are embedded directly or proxied server-side to stay within Kairos.
               </p>
             </div>
           </div>
@@ -636,7 +591,7 @@ export default function LiveFeedsPage() {
             }`}
             onClick={() => setActiveSlot(1)}>
             {slot1
-              ? slot1.embeds ? <FeedViewer source={slot1} /> : <InAppCard source={slot1} />
+              ? <FeedViewer source={slot1} />
               : <EmptySlot slotNum={1} onActivate={() => setActiveSlot(1)} />
             }
           </div>
@@ -649,7 +604,7 @@ export default function LiveFeedsPage() {
               }`}
               onClick={() => setActiveSlot(2)}>
               {slot2
-                ? slot2.embeds ? <FeedViewer source={slot2} /> : <InAppCard source={slot2} />
+                ? <FeedViewer source={slot2} />
                 : <EmptySlot slotNum={2} onActivate={() => setActiveSlot(2)} />
               }
             </div>
