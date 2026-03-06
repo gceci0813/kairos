@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 /* ─── Types ──────────────────────────────────────────────────────── */
 
@@ -140,7 +140,7 @@ const CATEGORIES: Category[] = [
         name: 'Insecam',
         desc: 'Directory of publicly accessible open network cameras',
         detail: 'Indexes IP cameras that are publicly accessible due to default or no authentication. Covers traffic cams, urban feeds, industrial sites, and more.',
-        url: 'http://www.insecam.org/en/byrating/',
+        url: 'https://www.insecam.org/en/byrating/',
         embeds: false,
         live: true,
       },
@@ -287,6 +287,53 @@ const CATEGORIES: Category[] = [
       },
     ],
   },
+  {
+    id: 'sigint',
+    label: 'RF & SIGINT',
+    color: '#6366F1',
+    sources: [
+      {
+        id: 'gpsjam',
+        name: 'GPSJam',
+        desc: 'Real-time global GPS jamming and spoofing hotspot map',
+        detail: 'Community-built GPS interference monitor derived from accuracy deviations reported by aircraft via ADS-B. Jamming hotspots correlate strongly with active conflict zones, military exercises, and adversarial electronic warfare campaigns. Closest free equivalent to HawkEye 360\'s RF geolocation product. Updated continuously.',
+        url: 'https://gpsjam.org/?lat=30&lon=10&z=2.5',
+        embeds: true,
+        live: true,
+        tag: 'SIGINT',
+      },
+      {
+        id: 'gfw',
+        name: 'Global Fishing Watch',
+        desc: 'Satellite-based dark vessel and AIS spoofing detection platform',
+        detail: 'Uses satellite AIS, synthetic aperture radar (SAR), and optical imagery to detect vessels globally — including those that disable AIS transponders ("dark vessels"). Identifies AIS spoofing gaps indicative of sanctions evasion, illicit transfers, and military logistics. Free public access. Core open-source alternative to HawkEye 360 maritime RF detection.',
+        url: 'https://globalfishingwatch.org/map/',
+        embeds: false,
+        live: true,
+        tag: 'AIS',
+      },
+      {
+        id: 'websdr',
+        name: 'WebSDR Receiver Network',
+        desc: 'Browser-accessible HF/VHF/UHF software-defined radio receivers worldwide',
+        detail: 'Distributed network of internet-accessible SDR receivers covering shortwave, HF, amateur, aviation, and military frequency bands. Listen to live HF communications, maritime radio, and SIGINT-adjacent frequencies from receiver stations globally. No hardware required.',
+        url: 'https://www.websdr.org/',
+        embeds: false,
+        live: true,
+        tag: 'SIGINT',
+      },
+      {
+        id: 'radiogarden',
+        name: 'Radio Garden',
+        desc: 'Live radio broadcasts from 30,000+ stations on an interactive globe',
+        detail: 'Navigate the globe and tune into local live radio in any region. Invaluable for monitoring local media narratives, emergency broadcasts, and the information environment during crises. Covers 30,000+ stations across 230+ countries — a passive HUMINT and media intelligence tool.',
+        url: 'https://radio.garden/',
+        embeds: true,
+        live: true,
+        tag: 'RF',
+      },
+    ],
+  },
 ];
 
 /* ─── Tag badge ──────────────────────────────────────────────────── */
@@ -297,75 +344,98 @@ const TAG_COLORS: Record<string, { bg: string; text: string; border: string }> =
   TERROR:   { bg: '#3B0A0A', text: '#FCA5A5', border: '#EF4444' },
   AIS:      { bg: '#0C2D4E', text: '#7DD3FC', border: '#0284C7' },
   SAR:      { bg: '#14291A', text: '#86EFAC', border: '#22C55E' },
+  SIGINT:   { bg: '#1E1B4B', text: '#A5B4FC', border: '#6366F1' },
+  RF:       { bg: '#2E1065', text: '#D8B4FE', border: '#A855F7' },
 };
 
-/* ─── Viewer components ──────────────────────────────────────────── */
+/* ─── Iframe viewer (for sources that allow embedding) ───────────── */
 
-function IframeViewer({ source }: { source: Source }) {
+function FeedViewer({ source }: { source: Source }) {
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => { setLoaded(false); }, [source.url]);
+
   return (
-    <div className="relative w-full h-full">
+    <div className="relative w-full h-full bg-[#080D18]">
       <iframe
-        key={source.id}
+        key={source.url}
         src={source.url}
-        className="w-full h-full border-0"
+        className={`w-full h-full border-0 transition-opacity duration-500 ${loaded ? 'opacity-100' : 'opacity-0'}`}
         allowFullScreen
         title={source.name}
+        onLoad={() => setLoaded(true)}
       />
-      {/* Source label overlay */}
-      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent px-4 py-3 pointer-events-none">
-        <div className="flex items-center gap-3">
-          <div className="w-1.5 h-1.5 rounded-full bg-[#DC2626] animate-pulse flex-shrink-0" />
-          <span className="text-xs font-bold text-white tracking-wide">{source.name}</span>
-          <span className="text-xs text-white/50">{source.desc}</span>
+
+      {!loaded && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-[#080D18]">
+          <div className="relative w-10 h-10">
+            <div className="absolute inset-0 rounded-full border-2 border-[#1E293B]" />
+            <div className="absolute inset-0 rounded-full border-2 border-t-[#2563EB] animate-spin" />
+          </div>
+          <p className="text-sm text-[#475569] font-mono">Connecting to {source.name}…</p>
         </div>
-      </div>
+      )}
+
+      {loaded && (
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent px-4 py-3 pointer-events-none">
+          <div className="flex items-center gap-3">
+            <div className="w-1.5 h-1.5 rounded-full bg-[#DC2626] animate-pulse flex-shrink-0" />
+            <span className="text-xs font-bold text-white tracking-wide">{source.name}</span>
+            <span className="text-xs text-white/50">{source.desc}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function LaunchCard({ source }: { source: Source }) {
+/* ─── In-app card (for sources that block embedding) ─────────────── */
+
+function InAppCard({ source }: { source: Source }) {
   const tagStyle = source.tag ? TAG_COLORS[source.tag] : null;
   return (
     <div className="flex items-center justify-center w-full h-full bg-[#080D18] p-8">
       <div className="max-w-md w-full">
-        {/* Header */}
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-3 h-3 rounded-full flex-shrink-0"
-            style={{ background: source.live ? '#DC2626' : '#64748B', boxShadow: source.live ? '0 0 8px #DC2626' : 'none', animation: source.live ? 'pulse 2s infinite' : 'none' }} />
+          <div
+            className="w-3 h-3 rounded-full flex-shrink-0"
+            style={{
+              background: source.live ? '#DC2626' : '#64748B',
+              boxShadow: source.live ? '0 0 8px #DC2626' : 'none',
+              animation: source.live ? 'pulse 2s infinite' : 'none',
+            }}
+          />
           {source.tag && tagStyle && (
-            <span className="text-[10px] font-bold tracking-widest uppercase px-2 py-0.5 rounded border"
-              style={{ color: tagStyle.text, background: tagStyle.bg, borderColor: tagStyle.border }}>
+            <span
+              className="text-[10px] font-bold tracking-widest uppercase px-2 py-0.5 rounded border"
+              style={{ color: tagStyle.text, background: tagStyle.bg, borderColor: tagStyle.border }}
+            >
               {source.tag}
             </span>
           )}
-          <span className="text-xs text-[#64748B] font-mono ml-auto">EXTERNAL SOURCE</span>
+          <span className="text-xs text-[#64748B] font-mono ml-auto">EMBED RESTRICTED</span>
         </div>
 
-        {/* Name */}
         <h2 className="text-2xl font-bold text-white mb-2 tracking-tight">{source.name}</h2>
         <p className="text-sm text-[#94A3B8] mb-6 leading-relaxed">{source.detail}</p>
 
-        {/* Source URL */}
         <div className="bg-[#0F172A] border border-[#1E293B] rounded-lg px-4 py-3 mb-6 flex items-center gap-3">
           <div className="w-2 h-2 rounded-full bg-[#16A34A] flex-shrink-0" />
           <span className="text-xs text-[#475569] font-mono truncate">{source.url}</span>
         </div>
 
-        {/* Launch button */}
-        <a
-          href={source.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center justify-center gap-3 w-full bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-semibold text-sm rounded-lg py-4 transition-colors shadow-lg shadow-blue-900/30">
+        <button
+          onClick={() => { window.location.href = source.url; }}
+          className="flex items-center justify-center gap-3 w-full bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-semibold text-sm rounded-lg py-4 transition-colors shadow-lg shadow-blue-900/30"
+        >
           <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-            <path fillRule="evenodd" d="M4.25 5.5a.75.75 0 00-.75.75v8.5c0 .414.336.75.75.75h8.5a.75.75 0 00.75-.75v-4a.75.75 0 011.5 0v4A2.25 2.25 0 0112.75 17h-8.5A2.25 2.25 0 012 14.75v-8.5A2.25 2.25 0 014.25 4h5a.75.75 0 010 1.5h-5z" clipRule="evenodd" />
-            <path fillRule="evenodd" d="M6.194 12.753a.75.75 0 001.06.053L16.5 4.44v2.81a.75.75 0 001.5 0v-4.5a.75.75 0 00-.75-.75h-4.5a.75.75 0 000 1.5h2.553l-9.056 8.194a.75.75 0 00-.053 1.06z" clipRule="evenodd" />
+            <path d="M10 12.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z" />
+            <path fillRule="evenodd" d="M.664 10.59a1.651 1.651 0 010-1.186A10.004 10.004 0 0110 3c4.257 0 7.893 2.66 9.336 6.41.147.381.146.804 0 1.186A10.004 10.004 0 0110 17c-4.257 0-7.893-2.66-9.336-6.41zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
           </svg>
-          Open {source.name} in New Tab
-        </a>
-
+          Open {source.name}
+        </button>
         <p className="text-xs text-[#334155] text-center mt-4">
-          This source cannot be embedded due to browser security policies.<br />Opens in a dedicated full-screen tab.
+          This site restricts inline embedding — press browser Back to return to Kairos.
         </p>
       </div>
     </div>
@@ -551,7 +621,7 @@ export default function LiveFeedsPage() {
             {/* Footer note */}
             <div className="px-4 py-4 border-t border-[#F1F5F9]">
               <p className="text-[10px] text-[#CBD5E1] leading-relaxed">
-                All sources are publicly accessible open-source data. Some feeds open externally due to browser security policies.
+                All sources are publicly accessible open-source data. Sources that restrict inline embedding will navigate to the feed directly.
               </p>
             </div>
           </div>
@@ -566,9 +636,7 @@ export default function LiveFeedsPage() {
             }`}
             onClick={() => setActiveSlot(1)}>
             {slot1
-              ? slot1.embeds
-                ? <IframeViewer source={slot1} />
-                : <LaunchCard source={slot1} />
+              ? slot1.embeds ? <FeedViewer source={slot1} /> : <InAppCard source={slot1} />
               : <EmptySlot slotNum={1} onActivate={() => setActiveSlot(1)} />
             }
           </div>
@@ -581,9 +649,7 @@ export default function LiveFeedsPage() {
               }`}
               onClick={() => setActiveSlot(2)}>
               {slot2
-                ? slot2.embeds
-                  ? <IframeViewer source={slot2} />
-                  : <LaunchCard source={slot2} />
+                ? slot2.embeds ? <FeedViewer source={slot2} /> : <InAppCard source={slot2} />
                 : <EmptySlot slotNum={2} onActivate={() => setActiveSlot(2)} />
               }
             </div>
