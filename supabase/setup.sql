@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   id            UUID        DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id       UUID        REFERENCES auth.users(id) ON DELETE SET NULL,
   user_email    TEXT,
-  module        TEXT        NOT NULL CHECK (module IN ('oracle', 'sentinel', 'actor', 'watchlist')),
+  module        TEXT        NOT NULL CHECK (module IN ('oracle', 'sentinel', 'actor', 'watchlist', 'documents')),
   action        TEXT        NOT NULL DEFAULT 'query'
                             CHECK (action IN ('query', 'login', 'logout', 'export')),
   input_summary JSONB,
