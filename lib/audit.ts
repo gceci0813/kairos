@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
 
-export type AuditModule = 'oracle' | 'sentinel' | 'actor';
+export type AuditModule = 'oracle' | 'sentinel' | 'actor' | 'watchlist';
 export type AuditAction = 'query' | 'login' | 'logout' | 'export';
 
 export interface AuditEntry {

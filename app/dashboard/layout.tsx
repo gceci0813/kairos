@@ -74,6 +74,13 @@ function IconShield() {
     </svg>
   );
 }
+function IconWatchlist() {
+  return (
+    <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+      <path fillRule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6zm-5 4a1 1 0 011-1h2a1 1 0 110 2h-2a1 1 0 01-1-1zm2 2a1 1 0 100 2 1 1 0 000-2z" clipRule="evenodd" />
+    </svg>
+  );
+}
 function IconLogout() {
   return (
     <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
@@ -106,8 +113,9 @@ const baseNavItems = [
   { label: 'Overview',  href: '/dashboard',          Icon: IconGrid                               },
   { label: 'ORACLE',    href: '/dashboard/oracle',   Icon: IconChart,  sub: 'Strategy Navigator'  },
   { label: 'SENTINEL',  href: '/dashboard/sentinel', Icon: IconEye,    sub: 'Horizon Watch'        },
-  { label: 'ACTOR',     href: '/dashboard/actor',    Icon: IconUser,   sub: 'Intelligence Module'  },
-  { label: 'Live Feeds',href: '/dashboard/live',     Icon: IconSignal, sub: 'Real-Time Intel Hub'  },
+  { label: 'ACTOR',     href: '/dashboard/actor',      Icon: IconUser,      sub: 'Intelligence Module'        },
+  { label: 'WATCHLIST', href: '/dashboard/watchlist', Icon: IconWatchlist, sub: 'Sanctions & Most Wanted'    },
+  { label: 'Live Feeds',href: '/dashboard/live',       Icon: IconSignal,    sub: 'Real-Time Intel Hub'        },
   { label: 'Signals',   href: '/dashboard/map',      Icon: IconGlobe,  sub: 'Early Warning System' },
   { label: 'Reports',   href: '/dashboard/reports',  Icon: IconDoc                                },
   { label: 'Profile',   href: '/dashboard/profile',  Icon: IconCard, sub: 'My Account & Activity' },
