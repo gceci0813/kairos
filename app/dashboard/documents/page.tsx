@@ -101,14 +101,15 @@ function UploadZone({
 // ── Main page ──────────────────────────────────────────────────────────────────
 
 export default function DocumentsPage() {
-  const [dragging, setDragging]     = useState(false);
-  const [preview, setPreview]       = useState<string | null>(null);
-  const [filename, setFilename]     = useState('');
-  const [loading, setLoading]       = useState(false);
-  const [result, setResult]         = useState<AnalysisResult | null>(null);
-  const [rawResult, setRawResult]   = useState<string | null>(null);
-  const [error, setError]           = useState('');
-  const [step, setStep]             = useState<'upload' | 'result'>('upload');
+  const [dragging, setDragging]         = useState(false);
+  const [preview, setPreview]           = useState<string | null>(null);
+  const [filename, setFilename]         = useState('');
+  const [loading, setLoading]           = useState(false);
+  const [result, setResult]             = useState<AnalysisResult | null>(null);
+  const [rawResult, setRawResult]       = useState<string | null>(null);
+  const [error, setError]               = useState('');
+  const [unconfigured, setUnconfigured] = useState(false);
+  const [step, setStep]                 = useState<'upload' | 'result'>('upload');
 
   const processFile = useCallback((file: File) => {
     if (!file.type.startsWith('image/')) {
@@ -146,6 +147,7 @@ export default function DocumentsPage() {
     if (!preview) return;
     setLoading(true);
     setError('');
+    setUnconfigured(false);
     setResult(null);
     setRawResult(null);
 
@@ -161,7 +163,9 @@ export default function DocumentsPage() {
       });
       const json = await res.json();
 
-      if (json.error) {
+      if (json.unconfigured) {
+        setUnconfigured(true);
+      } else if (json.error) {
         setError(json.error);
       } else if (json.parseError) {
         setRawResult(json.raw);
@@ -183,6 +187,7 @@ export default function DocumentsPage() {
     setResult(null);
     setRawResult(null);
     setError('');
+    setUnconfigured(false);
     setStep('upload');
   }
 
@@ -251,6 +256,16 @@ export default function DocumentsPage() {
                   </div>
                   <p className="text-xs text-[#64748B] truncate">
                     <span className="font-semibold text-[#475569]">File:</span> {filename}
+                  </p>
+                </div>
+              )}
+
+              {unconfigured && (
+                <div className="bg-[#FFFBEB] border border-[#FDE68A] rounded-lg p-3 space-y-1.5">
+                  <p className="text-xs font-bold text-[#D97706]">ANTHROPIC_API_KEY not configured</p>
+                  <p className="text-xs text-[#92400E]">
+                    Add <code className="bg-white px-1 py-0.5 rounded font-mono border border-[#FDE68A]">ANTHROPIC_API_KEY=your_key</code> to{' '}
+                    <code className="bg-white px-1 py-0.5 rounded font-mono border border-[#FDE68A]">.env.local</code> and restart the server.
                   </p>
                 </div>
               )}

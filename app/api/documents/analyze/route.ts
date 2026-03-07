@@ -62,6 +62,15 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // ── API key check ─────────────────────────────────────────
+  const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
+  if (!apiKey) {
+    return NextResponse.json(
+      { unconfigured: true, error: 'ANTHROPIC_API_KEY is not set. Add it to your environment variables.' },
+      { status: 503 },
+    );
+  }
+
   await logAuditEvent({
     user_id:       user?.id,
     user_email:    user?.email,
