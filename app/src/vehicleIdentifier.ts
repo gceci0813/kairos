@@ -1,174 +1,227 @@
-export class LocationTracker {
-  private locationData: Map<string, LocationPoint[]> = new Map();
+export class VehicleIdentifier {
+  private canvas: HTMLCanvasElement;
+  private ctx: CanvasRenderingContext2D;
   
-  addLocationPoint(deviceId: string, latitude: number, longitude: number, timestamp: number): void {
-    if (!this.locationData.has(deviceId)) {
-      this.locationData.set(deviceId, []);
+  constructor() {
+    this.canvas = document.createElement('canvas');
+    this.ctx = this.canvas.getContext('2d')!;
+  }
+  
+  processImage(imageElement: HTMLImageElement): VehicleData[] {
+    // Set canvas size to match image
+    this.canvas.width = imageElement.width;
+    this.canvas.height = imageElement.height;
+    
+    // Draw image to canvas
+    this.ctx.drawImage(imageElement, 0, 0);
+    
+    // Get image data
+    const imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+    
+    // Find rectangular regions that might be license plates
+    const regions = this.findRectangularRegions(imageData);
+    
+    // Extract text from these regions
+    return regions.map(region => this.extractTextFromRegion(region, imageData));
+  }
+  
+  private findRectangularRegions(imageData: ImageData): ImageRegion[] {
+    const regions: ImageRegion[] = [];
+    const width = imageData.width;
+    const height = imageData.height;
+    const data = imageData.data;
+    
+    // Convert to grayscale for edge detection
+    const grayscale = new Uint8ClampedArray(width * height);
+    for (let i = 0; i < data.length; i += 4) {
+      grayscale[i / 4] = (data[i] + data[i + 1] + data[i + 2]) / 3;
     }
     
-    this.locationData.get(deviceId)!.push({
-      latitude,
-      longitude,
-      timestamp
+    // Simple edge detection
+    const edges = this.detectEdges(grayscale, width, height);
+    
+    // Find contours
+    const contours = this.findContours(edges, width, height);
+    
+    // Filter contours by aspect ratio and size (typical for license plates)
+    return contours.filter(contour => {
+      const aspectRatio = contour.width / contour.height;
+      return aspectRatio > 2.0 && aspectRatio < 5.5 && 
+             contour.width > 80 && contour.height > 20;
     });
   }
   
-  analyzeMovementPatterns(deviceId: string): MovementPattern | null {
-    const points = this.locationData.get(deviceId);
-    if (!points || points.length < 2) {
-      return null;
+  private detectEdges(grayscale: Uint8ClampedArray, width: number, height: number): boolean[] {
+    const edges = new Array(width * height).fill(false);
+    
+    // Simple Sobel edge detection
+    for (let y = 1; y < height - 1; y++) {
+      for (let x = 1; x < width - 1; x++) {
+        const idx = y * width + x;
+        
+        // Calculate gradient
+        const gx = 
+          -1 * grayscale[(y - 1) * width + (x - 1)] +
+          1 * grayscale[(y - 1) * width + (x + 1)] +
+          -2 * grayscale[y * width + (x - 1)] +
+          2 * grayscale[y * width + (x + 1)] +
+          -1 * grayscale[(y + 1) * width + (x - 1)] +
+          1 * grayscale[(y + 1) * width + (x + 1)];
+        
+        const gy = 
+          -1 * grayscale[(y - 1) * width + (x - 1)] +
+          -2 * grayscale[(y - 1) * width + x] +
+          -1 * grayscale[(y - 1) * width + (x + 1)] +
+          1 * grayscale[(y + 1) * width + (x - 1)] +
+          2 * grayscale[(y + 1) * width + x] +
+          1 * grayscale[(y + 1) * width + (x + 1)];
+        
+        const magnitude = Math.sqrt(gx * gx + gy * gy);
+        edges[idx] = magnitude > 50; // Threshold
+      }
     }
     
-    // Sort by timestamp
-    points.sort((a, b) => a.timestamp - b.timestamp);
-    
-    // Calculate movement patterns
-    return {
-      totalDistance: this.calculateTotalDistance(points),
-      averageSpeed: this.calculateAverageSpeed(points),
-      frequentLocations: this.findFrequentLocations(points),
-      activeHours: this.determineActiveHours(points)
-    };
+    return edges;
   }
   
-  private calculateTotalDistance(points: LocationPoint[]): number {
-    let totalDistance = 0;
+  private findContours(edges: boolean[], width: number, height: number): ImageRegion[] {
+    const visited = new Array(width * height).fill(false);
+    const regions: ImageRegion[] = [];
     
-    for (let i = 1; i < points.length; i++) {
-      const prev = points[i - 1];
-      const curr = points[i];
-      
-      // Haversine formula for distance calculation
-      const distance = this.haversineDistance(
-        prev.latitude, prev.longitude,
-        curr.latitude, curr.longitude
-      );
-      
-      totalDistance += distance;
-    }
-    
-    return totalDistance;
-  }
-  
-  private calculateAverageSpeed(points: LocationPoint[]): number {
-    if (points.length < 2) return 0;
-    
-    const totalDistance = this.calculateTotalDistance(points);
-    const timeSpan = points[points.length - 1].timestamp - points[0].timestamp;
-    
-    return timeSpan > 0 ? (totalDistance / timeSpan) * 3600 : 0; // km/h
-  }
-  
-  private findFrequentLocations(points: LocationPoint[]): FrequentLocation[] {
-    // Group points by proximity
-    const locationGroups = this.groupByProximity(points, 0.01); // ~1km
-    
-    // Calculate frequency for each location
-    return locationGroups.map(group => ({
-      latitude: this.calculateCenter(group).latitude,
-      longitude: this.calculateCenter(group).longitude,
-      visitCount: group.length,
-      averageStayDuration: this.calculateAverageStayDuration(group)
-    }));
-  }
-  
-  private determineActiveHours(points: LocationPoint[]): number[] {
-    const hourCounts = new Array(24).fill(0);
-    
-    points.forEach(point => {
-      const hour = new Date(point.timestamp).getHours();
-      hourCounts[hour]++;
-    });
-    
-    // Return hours with activity above threshold
-    const threshold = Math.max(...hourCounts) * 0.3;
-    return hourCounts
-      .map((count, hour) => count > threshold ? hour : -1)
-      .filter(hour => hour !== -1);
-  }
-  
-  private haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-    const R = 6371; // Earth's radius in km
-    const dLat = this.toRadians(lat2 - lat1);
-    const dLon = this.toRadians(lon2 - lon1);
-    
-    const a = 
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(this.toRadians(lat1)) * Math.cos(this.toRadians(lat2)) *
-      Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
-  }
-  
-  private toRadians(degrees: number): number {
-    return degrees * (Math.PI / 180);
-  }
-  
-  private groupByProximity(points: LocationPoint[], threshold: number): LocationPoint[][] {
-    // Simple clustering algorithm
-    const groups: LocationPoint[][] = [];
-    const assigned = new Set<number>();
-    
-    for (let i = 0; i < points.length; i++) {
-      if (assigned.has(i)) continue;
-      
-      const group = [points[i]];
-      assigned.add(i);
-      
-      for (let j = i + 1; j < points.length; j++) {
-        if (assigned.has(j)) continue;
-        
-        const distance = this.haversineDistance(
-          points[i].latitude, points[i].longitude,
-          points[j].latitude, points[j].longitude
-        );
-        
-        if (distance < threshold) {
-          group.push(points[j]);
-          assigned.add(j);
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const idx = y * width + x;
+        if (edges[idx] && !visited[idx]) {
+          const region = this.traceContour(edges, visited, x, y, width, height);
+          if (region) {
+            regions.push(region);
+          }
         }
       }
-      
-      groups.push(group);
     }
     
-    return groups;
+    return regions;
   }
   
-  private calculateCenter(points: LocationPoint[]): LocationPoint {
-    const sumLat = points.reduce((sum, p) => sum + p.latitude, 0);
-    const sumLon = points.reduce((sum, p) => sum + p.longitude, 0);
+  private traceContour(
+    edges: boolean[], 
+    visited: boolean[], 
+    startX: number, 
+    startY: number, 
+    width: number, 
+    height: number
+  ): ImageRegion | null {
+    const points: [number, number][] = [];
+    const stack: [number, number][] = [[startX, startY]];
     
+    let minX = startX, maxX = startX;
+    let minY = startY, maxY = startY;
+    
+    while (stack.length > 0) {
+      const [x, y] = stack.pop()!;
+      const idx = y * width + x;
+      
+      if (x < 0 || x >= width || y < 0 || y >= height || !edges[idx] || visited[idx]) {
+        continue;
+      }
+      
+      visited[idx] = true;
+      points.push([x, y]);
+      
+      minX = Math.min(minX, x);
+      maxX = Math.max(maxX, x);
+      minY = Math.min(minY, y);
+      maxY = Math.max(maxY, y);
+      
+      // Add neighbors
+      stack.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);
+    }
+    
+    // Return bounding box
     return {
-      latitude: sumLat / points.length,
-      longitude: sumLon / points.length,
-      timestamp: 0
+      x: minX,
+      y: minY,
+      width: maxX - minX + 1,
+      height: maxY - minY + 1
     };
   }
   
-  private calculateAverageStayDuration(group: LocationPoint[]): number {
-    if (group.length < 2) return 0;
+  private extractTextFromRegion(region: ImageRegion, imageData: ImageData): VehicleData {
+    // Extract the region from the image
+    const regionData = this.extractRegionData(region, imageData);
     
-    const timeSpan = group[group.length - 1].timestamp - group[0].timestamp;
-    return timeSpan / group.length;
+    // Simple OCR simulation (in a real implementation, you'd use Tesseract.js)
+    const text = this.simulateOCR(regionData);
+    
+    return {
+      region: region,
+      text: text,
+      confidence: this.calculateConfidence(regionData)
+    };
+  }
+  
+  private extractRegionData(region: ImageRegion, imageData: ImageData): ImageData {
+    const { x, y, width, height } = region;
+    const regionData = new ImageData(width, height);
+    const srcData = imageData.data;
+    const dstData = regionData.data;
+    
+    for (let row = 0; row < height; row++) {
+      for (let col = 0; col < width; col++) {
+        const srcIdx = ((y + row) * imageData.width + (x + col)) * 4;
+        const dstIdx = (row * width + col) * 4;
+        
+        dstData[dstIdx] = srcData[srcIdx];
+        dstData[dstIdx + 1] = srcData[srcIdx + 1];
+        dstData[dstIdx + 2] = srcData[srcIdx + 2];
+        dstData[dstIdx + 3] = srcData[srcIdx + 3];
+      }
+    }
+    
+    return regionData;
+  }
+  
+  private simulateOCR(imageData: ImageData): string {
+    // This is a placeholder for OCR
+    // In a real implementation, you'd use Tesseract.js or similar
+    const randomLetters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let result = '';
+    
+    // Generate a random license plate-like string
+    for (let i = 0; i < 7; i++) {
+      result += randomLetters.charAt(Math.floor(Math.random() * randomLetters.length));
+    }
+    
+    return result;
+  }
+  
+  private calculateConfidence(imageData: ImageData): number {
+    // Simple confidence calculation based on image contrast
+    const data = imageData.data;
+    let contrast = 0;
+    
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+      
+      const brightness = (r + g + b) / 3;
+      contrast += brightness > 128 ? brightness : 255 - brightness;
+    }
+    
+    return Math.min(0.95, contrast / (data.length / 4) / 128);
   }
 }
 
-interface LocationPoint {
-  latitude: number;
-  longitude: number;
-  timestamp: number;
+interface ImageRegion {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
 }
 
-interface MovementPattern {
-  totalDistance: number;
-  averageSpeed: number;
-  frequentLocations: FrequentLocation[];
-  activeHours: number[];
-}
-
-interface FrequentLocation {
-  latitude: number;
-  longitude: number;
+interface VehicleData {
+  region: ImageRegion;
+  text: string;
+  confidence: number;
 }

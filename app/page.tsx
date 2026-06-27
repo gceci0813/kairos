@@ -168,3 +168,4 @@ export default function HomePage() {
     </div>
   );
 }
+<Link href="/intelligence">Intelligence Platform</Link>
