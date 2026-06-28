@@ -19,6 +19,20 @@ export async function GET(request: NextRequest) {
 
   const backend = isRedisQueueActive() ? 'redis-streams' : 'in-process';
 
+  // Admin: purge a topic's backlog (?purge=nlp).
+  const purgeTopic = new URL(request.url).searchParams.get('purge');
+  if (purgeTopic) {
+    try {
+      const queue = getMessageQueue();
+      const before = await queue.size(purgeTopic);
+      await queue.purge(purgeTopic);
+      return NextResponse.json({ backend, purged: purgeTopic, removed: before });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Purge failed';
+      return NextResponse.json({ backend, error: message }, { status: 500 });
+    }
+  }
+
   try {
     const queue = getMessageQueue<{ ping: string; at: number }>();
     const topic = 'healthcheck';

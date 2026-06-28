@@ -10,6 +10,8 @@ export interface MessageQueue<T> {
   consume(topic: string, count?: number): Promise<T[]>;
   // Number of messages currently waiting.
   size(topic: string): Promise<number>;
+  // Discard all messages on a topic.
+  purge(topic: string): Promise<void>;
 }
 
 export class InProcessQueue<T> implements MessageQueue<T> {
@@ -29,6 +31,10 @@ export class InProcessQueue<T> implements MessageQueue<T> {
 
   async size(topic: string): Promise<number> {
     return (this.topics.get(topic) ?? []).length;
+  }
+
+  async purge(topic: string): Promise<void> {
+    this.topics.delete(topic);
   }
 }
 
@@ -90,6 +96,10 @@ export class RedisStreamsQueue<T> implements MessageQueue<T> {
 
   async size(topic: string): Promise<number> {
     return (await this.redis.xlen(this.streamKey(topic))) as number;
+  }
+
+  async purge(topic: string): Promise<void> {
+    await this.redis.del(this.streamKey(topic));
   }
 }
 
