@@ -10,7 +10,7 @@ import {
   IconUsers, 
   IconSettings, 
   IconActivity,
-  IconSignal,
+  IconSignalH,
   IconLocation,
   IconChevronDown,
   IconChevronRight,
@@ -33,7 +33,7 @@ const baseNavItems: NavItem[] = [
   { label: 'Network', href: '/dashboard/network', Icon: IconUsers, sub: 'Network analysis' },
   { label: 'Activity', href: '/dashboard/activity', Icon: IconActivity, sub: 'Activity monitoring' },
   { label: 'Location Intelligence', href: '/dashboard/location-test', Icon: IconLocation, sub: 'Geolocation analysis' },
-  { label: 'Social Intel', href: '/dashboard/social-intel', Icon: IconSignal, sub: 'Social Media Intelligence & Sentiment' },
+  { label: 'Social Intel', href: '/dashboard/social-intel', Icon: IconSignalH, sub: 'Social Media Intelligence & Sentiment' },
   { label: 'ORACLE', href: '/dashboard/oracle', Icon: IconBrain, sub: 'Predictive analysis' },
   { label: 'SIGMA', href: '/dashboard/sigma', Icon: IconEye, sub: 'Surveillance & monitoring' },
   { label: 'Settings', href: '/dashboard/settings', Icon: IconSettings, sub: 'System settings' }
