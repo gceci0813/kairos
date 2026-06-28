@@ -1,6 +1,7 @@
 import { getSupabaseAdmin } from './supabase-admin';
 import { CorpusFilter, passesFilter } from './corpus-filter';
 import { canonicalizeEntity } from './entity-resolution';
+import { ensureCanonicalMap } from './entity-canonical';
 
 // Aggregate political-trend analytics over the findings corpus. Treats named
 // entities (candidates, parties, organizations, places) as TOPICS in public
@@ -21,6 +22,7 @@ interface FindingRow {
 async function loadFindings(filter: CorpusFilter, limit = 8000): Promise<FindingRow[]> {
   const supabase = getSupabaseAdmin();
   if (!supabase) throw new Error('Supabase admin client not configured');
+  await ensureCanonicalMap();
   const since = new Date(Date.now() - filter.sinceDays * 86400000).toISOString();
   // Embed the message's posted_at so we can filter by real content recency.
   const { data, error } = await supabase

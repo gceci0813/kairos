@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from './supabase-admin';
 import { canonicalizeEntity } from './entity-resolution';
+import { ensureCanonicalMap } from './entity-canonical';
 
 // Emerging-narrative detection: surfaces topics whose recent share of
 // discourse is rising sharply versus their own baseline — proactive signal of
@@ -20,6 +21,7 @@ export async function emergingNarratives(sinceDays = 14, minRecent = 3): Promise
 }> {
   const supabase = getSupabaseAdmin();
   if (!supabase) throw new Error('Supabase admin client not configured');
+  await ensureCanonicalMap();
 
   // Key off the message's POST date (when published), not analyzed_at (when
   // processed) — otherwise a backfill makes everything look "new". Filter the

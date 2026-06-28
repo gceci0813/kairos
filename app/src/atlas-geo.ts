@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from './supabase-admin';
 import { GeoPoint, lookupPlace, GAZETTEER } from './atlas-gazetteer';
+import { ensureCanonicalMap } from './entity-canonical';
 
 export type GeoLevel = 'all' | 'country' | 'city';
 
@@ -27,6 +28,7 @@ interface FindingRow {
 async function loadFindings(query: string | null, sinceDays: number, limit = 5000): Promise<FindingRow[]> {
   const supabase = getSupabaseAdmin();
   if (!supabase) throw new Error('Supabase admin client not configured');
+  await ensureCanonicalMap();
 
   let matchKeys: string[] | null = null;
   if (query && query.trim()) {

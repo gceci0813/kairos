@@ -1,6 +1,7 @@
 import { getSupabaseAdmin } from './supabase-admin';
 import { lookupPlace } from './atlas-gazetteer';
 import { canonicalizeEntity } from './entity-resolution';
+import { ensureCanonicalMap } from './entity-canonical';
 
 // Aggregate forecasting/analytics over the findings corpus, keyed on REGIONS
 // (places) and NARRATIVES (topics) — never individuals. Powers ORACLE's
@@ -41,6 +42,7 @@ interface FindingRow {
 async function loadFindings(sinceDays: number, limit = 5000): Promise<FindingRow[]> {
   const supabase = getSupabaseAdmin();
   if (!supabase) throw new Error('Supabase admin client not configured');
+  await ensureCanonicalMap();
   const since = new Date(Date.now() - sinceDays * 86400000).toISOString();
   const { data, error } = await supabase
     .from('sigma_findings')

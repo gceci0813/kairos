@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from './supabase-admin';
 import { canonicalizeEntity } from './entity-resolution';
+import { ensureCanonicalMap } from './entity-canonical';
 
 // Entity co-occurrence graph: which entities (orgs, places, and topics) appear
 // together in the same findings. Aggregate relationships between PUBLIC
@@ -28,6 +29,7 @@ export async function entityGraph(
 ): Promise<{ nodes: GraphNode[]; edges: GraphEdge[] }> {
   const supabase = getSupabaseAdmin();
   if (!supabase) throw new Error('Supabase admin client not configured');
+  await ensureCanonicalMap();
 
   const minEdge = options.minEdgeWeight ?? 2;
   const maxNodes = options.maxNodes ?? 60;

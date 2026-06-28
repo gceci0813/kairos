@@ -3,6 +3,7 @@
 // fragmented across spelling/title variants, and collapses syndicated/near-
 // duplicate stories so one event isn't counted many times. This corrects
 // over-counting that otherwise inflates every downstream metric.
+import { canonicalLookup } from './entity-canonical';
 
 const HONORIFICS = [
   'president', 'pres', 'mr', 'mrs', 'ms', 'dr', 'sen', 'senator', 'rep',
@@ -96,6 +97,10 @@ const ALIASES: Record<string, string> = {
 
 export function canonicalizeEntity(raw: string): string {
   if (!raw) return raw;
+  // First consult the LLM-derived canonical map (handles inflection,
+  // transliteration, mixed-script). Falls back to static rules below.
+  const llm = canonicalLookup(raw);
+  if (llm) return llm;
   // Normalize Unicode (NFKC) so visually-identical Cyrillic/Latin forms with
   // different byte sequences compare equal against the alias map.
   let s = raw.normalize('NFKC').toLowerCase().trim().replace(/\s+/g, ' ');
