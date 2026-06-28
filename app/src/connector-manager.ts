@@ -1,6 +1,10 @@
 import { BaseDataConnector, StandardizedData } from './base-connector';
 import { GDELTConnector } from './gdelt-connector';
 import { RedditConnector } from './reddit-connector';
+import { NewsAPIConnector } from './newsapi-connector';
+import { TwitterConnector } from './twitter-connector';
+import { YouTubeConnector } from './youtube-connector';
+import { TelegramConnector } from './telegram-connector';
 
 const CACHE_TTL_MS = 60 * 1000;
 
@@ -25,6 +29,25 @@ export class ConnectorManager {
         process.env.REDDIT_CLIENT_SECRET,
         'Kairos/1.0.0'
       ));
+    }
+
+    if (process.env.NEWSAPI_KEY) {
+      this.connectors.set('newsapi', new NewsAPIConnector(process.env.NEWSAPI_KEY));
+    }
+
+    if (process.env.TWITTER_BEARER_TOKEN) {
+      this.connectors.set('twitter', new TwitterConnector(process.env.TWITTER_BEARER_TOKEN));
+    }
+
+    if (process.env.YOUTUBE_API_KEY) {
+      this.connectors.set('youtube', new YouTubeConnector(process.env.YOUTUBE_API_KEY));
+    }
+
+    if (process.env.TELEGRAM_CHANNELS) {
+      const channels = process.env.TELEGRAM_CHANNELS.split(',').map((c) => c.trim()).filter(Boolean);
+      if (channels.length > 0) {
+        this.connectors.set('telegram', new TelegramConnector(channels));
+      }
     }
   }
 

@@ -71,12 +71,14 @@ export class GDELTConnector extends BaseDataConnector {
       return [];
     }
     
-    return rawData.articles.map((article: any) => ({
+    return rawData.articles.map((article: any) => {
+      const parsedDate = new Date(article.seen_date);
+      return {
       id: `gdelt-${article.seen_date}-${Math.random().toString(36).substring(2, 9)}`,
       source: 'GDELT',
       content: article.title || '',
       author: article.seename || 'Unknown',
-      timestamp: new Date(article.seen_date),
+      timestamp: isNaN(parsedDate.getTime()) ? new Date() : parsedDate,
       metadata: {
         url: article.url,
         language: article.language,
@@ -87,6 +89,7 @@ export class GDELTConnector extends BaseDataConnector {
         persons: article.persons ? article.persons.split(';') : [],
         organizations: article.organizations ? article.organizations.split(';') : []
       }
-    }));
+    };
+    });
   }
 }

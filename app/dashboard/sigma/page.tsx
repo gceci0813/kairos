@@ -2,10 +2,19 @@
 
 import { useState } from 'react';
 
+const RECOMMENDED_ACTION_STYLE: Record<string, string> = {
+  no_action: 'bg-slate-100 text-slate-600',
+  monitor: 'bg-blue-100 text-blue-700',
+  flag_for_review: 'bg-amber-100 text-amber-700',
+  escalate: 'bg-red-100 text-red-700',
+};
+
 export default function SigmaPage() {
   const [query, setQuery] = useState('');
   const [source, setSource] = useState('');
+  const [analyze, setAnalyze] = useState(false);
   const [results, setResults] = useState<any[]>([]);
+  const [findings, setFindings] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -27,15 +36,18 @@ export default function SigmaPage() {
         body: JSON.stringify({
           query,
           source: source || undefined,
+          analyze,
         }),
       });
 
       if (!response.ok) {
-        throw new Error(`Error: ${response.status}`);
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.error || `Error: ${response.status}`);
       }
 
       const data = await response.json();
       setResults(data.results || []);
+      setFindings(data.findings || []);
     } catch (err: any) {
       setError(err.message || 'Failed to fetch data');
     } finally {
@@ -45,7 +57,8 @@ export default function SigmaPage() {
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">SIGMA Module Test</h1>
+      <h1 className="text-2xl font-bold mb-1">SIGMA</h1>
+      <p className="text-sm text-gray-500 mb-6">Signal Intelligence and Global Monitoring</p>
 
       <div className="mb-4">
         <label className="block text-sm font-medium mb-2">Query:</label>
@@ -68,8 +81,20 @@ export default function SigmaPage() {
           <option value="">All Sources</option>
           <option value="gdelt">GDELT</option>
           <option value="reddit">Reddit</option>
+          <option value="newsapi">NewsAPI</option>
+          <option value="twitter">X/Twitter</option>
+          <option value="youtube">YouTube</option>
+          <option value="telegram">Telegram</option>
         </select>
+        <p className="text-xs text-gray-400 mt-1">
+          Sources without configured API credentials will be skipped automatically.
+        </p>
       </div>
+
+      <label className="flex items-center gap-2 mb-4 text-sm font-medium">
+        <input type="checkbox" checked={analyze} onChange={(e) => setAnalyze(e.target.checked)} />
+        Run NLP analysis (sentiment, entities, topics, coordination signals)
+      </label>
 
       <button
         onClick={fetchData}
@@ -85,7 +110,58 @@ export default function SigmaPage() {
         </div>
       )}
 
-      {results.length > 0 && (
+      {findings.length > 0 && (
+        <div className="mt-6">
+          <h2 className="text-xl font-semibold mb-4">Findings ({findings.length})</h2>
+          <div className="space-y-4">
+            {findings.map((f, index) => (
+              <div key={index} className="p-4 border rounded">
+                <div className="flex items-start justify-between gap-2">
+                  <h3 className="font-semibold">{f.finding}</h3>
+                  <span className={`text-xs font-bold px-2 py-1 rounded-full whitespace-nowrap ${RECOMMENDED_ACTION_STYLE[f.recommended_action] ?? 'bg-slate-100 text-slate-600'}`}>
+                    {f.recommended_action.replace('_', ' ').toUpperCase()}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-600 mt-1">{f.raw.content}</p>
+                <p className="text-xs text-gray-500 mt-2">
+                  Confidence: {(f.confidence_score * 100).toFixed(0)}% · Sentiment: {f.nlp.sentiment} ({f.nlp.sentimentScore.toFixed(2)}) · Language: {f.nlp.language}
+                </p>
+                {f.nlp.entities.length > 0 && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Entities: {f.nlp.entities.map((e: any) => `${e.text} (${e.type})`).join(', ')}
+                  </p>
+                )}
+                {f.nlp.topics.length > 0 && (
+                  <p className="text-xs text-gray-500 mt-1">Topics: {f.nlp.topics.join(', ')}</p>
+                )}
+                {f.coordination.isFlagged && (
+                  <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800">
+                    Coordination signal (score {f.coordination.score.toFixed(2)}): {f.coordination.reasons.join('; ')}
+                  </div>
+                )}
+                <details className="mt-2">
+                  <summary className="text-xs text-blue-600 cursor-pointer">Reasoning chain</summary>
+                  <ul className="text-xs text-gray-500 list-disc ml-4 mt-1">
+                    {f.reasoning_chain.map((step: string, i: number) => <li key={i}>{step}</li>)}
+                  </ul>
+                </details>
+                {f.source_citations[0]?.url && (
+                  <a
+                    href={f.source_citations[0].url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-500 hover:underline text-sm block mt-2"
+                  >
+                    Read more
+                  </a>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {findings.length === 0 && results.length > 0 && (
         <div className="mt-6">
           <h2 className="text-xl font-semibold mb-4">Results ({results.length})</h2>
           <div className="space-y-4">
