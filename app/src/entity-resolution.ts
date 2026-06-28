@@ -36,18 +36,35 @@ const ALIASES: Record<string, string> = {
   'uae': 'United Arab Emirates',
 
   // --- Cross-language normalization (corpus is ~42% Russian) ---
-  // Russian (Cyrillic) → English canonical
+  // Russian (Cyrillic) → English canonical. Russian is inflected, so the
+  // common case forms (nominative/genitive/accusative/instrumental) of the
+  // highest-frequency entities are mapped explicitly.
   'россия': 'Russia',
+  'россии': 'Russia',
+  'россию': 'Russia',
+  'россией': 'Russia',
   'рф': 'Russia',
   'украина': 'Ukraine',
+  'украины': 'Ukraine',
+  'украине': 'Ukraine',
+  'украину': 'Ukraine',
+  'украиной': 'Ukraine',
   'сша': 'United States',
   'америка': 'United States',
   'китай': 'China',
+  'китая': 'China',
   'израиль': 'Israel',
+  'израиля': 'Israel',
+  'израиле': 'Israel',
   'иран': 'Iran',
+  'ирана': 'Iran',
+  'иране': 'Iran',
   'ирак': 'Iraq',
+  'ирака': 'Iraq',
   'сирия': 'Syria',
+  'сирии': 'Syria',
   'турция': 'Turkey',
+  'турции': 'Turkey',
   'германия': 'Germany',
   'франция': 'France',
   'европа': 'Europe',
