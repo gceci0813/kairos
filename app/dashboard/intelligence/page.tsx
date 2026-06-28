@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import type { ImageProcessor } from '@/imageProcessor';
+import { ImageProcessor } from '@/imageProcessor';
 import { LocationTracker } from '@/locationTracker';
-import type { VehicleIdentifier } from '@/app/src/vehicleIdentifier';
+import { VehicleIdentifier } from '@/app/src/vehicleIdentifier';
 
 export default function IntelligencePage() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -14,26 +14,31 @@ export default function IntelligencePage() {
   const imageRef = useRef<HTMLImageElement>(null);
 
   // ImageProcessor/VehicleIdentifier touch document.createElement in their
-  // constructors, so they must only be instantiated client-side, not at
-  // module/render time during SSR prerender.
+  // constructors, so they must only be instantiated inside event handlers
+  // (which never run during SSR prerender), not at render time.
   const imageProcessorRef = useRef<ImageProcessor | null>(null);
   const vehicleIdentifierRef = useRef<VehicleIdentifier | null>(null);
-  const locationTracker = useRef(new LocationTracker()).current;
+  const locationTrackerRef = useRef<LocationTracker | null>(null);
 
   const getImageProcessor = () => {
     if (!imageProcessorRef.current) {
-      const { ImageProcessor } = require('@/imageProcessor');
       imageProcessorRef.current = new ImageProcessor();
     }
-    return imageProcessorRef.current!;
+    return imageProcessorRef.current;
   };
 
   const getVehicleIdentifier = () => {
     if (!vehicleIdentifierRef.current) {
-      const { VehicleIdentifier } = require('@/app/src/vehicleIdentifier');
       vehicleIdentifierRef.current = new VehicleIdentifier();
     }
-    return vehicleIdentifierRef.current!;
+    return vehicleIdentifierRef.current;
+  };
+
+  const getLocationTracker = () => {
+    if (!locationTrackerRef.current) {
+      locationTrackerRef.current = new LocationTracker();
+    }
+    return locationTrackerRef.current;
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -67,9 +72,10 @@ export default function IntelligencePage() {
     const latitude = 40.7128 + (Math.random() - 0.5) * 0.1;
     const longitude = -74.0060 + (Math.random() - 0.5) * 0.1;
 
-    locationTracker.addLocationPoint(deviceId, latitude, longitude, Date.now());
+    const tracker = getLocationTracker();
+    tracker.addLocationPoint(deviceId, latitude, longitude, Date.now());
 
-    const patterns = locationTracker.analyzeMovementPatterns(deviceId);
+    const patterns = tracker.analyzeMovementPatterns(deviceId);
     setLocationData({
       deviceId,
       patterns,
