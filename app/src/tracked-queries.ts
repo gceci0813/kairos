@@ -5,6 +5,7 @@
 const DEFAULT_TRACKED_QUERIES = [
   // United States
   'US presidential election',
+  'US midterm election',
   'US Senate election',
   'US House election',
   'US governor election',
@@ -17,21 +18,50 @@ const DEFAULT_TRACKED_QUERIES = [
   'French election',
   'Italian election',
   'Polish election',
-  // Middle East & Africa
+  'Spanish election',
+  'Dutch election',
+  'Swedish election',
+  'Greek election',
+  'Portuguese election',
+  'Hungarian election',
+  'Romanian election',
+  'Ukrainian election',
+  'Russian election',
+  'Georgian election',
+  // Middle East & North Africa
   'Israeli election',
   'Turkish election',
+  'Iranian election',
+  'Egyptian election',
+  'Iraqi election',
+  'Tunisian election',
+  // Sub-Saharan Africa
   'Nigerian election',
   'South African election',
+  'Kenyan election',
+  'Ghanaian election',
+  'Ethiopian election',
   // Asia-Pacific
   'Indian election',
+  'Pakistani election',
+  'Bangladeshi election',
+  'Indonesian election',
   'Japanese election',
   'South Korean election',
+  'Taiwanese election',
+  'Philippine election',
+  'Thai election',
+  'Malaysian election',
   'Australian federal election',
   // Americas
   'Canadian federal election',
   'Brazilian election',
   'Mexican election',
   'Argentine election',
+  'Colombian election',
+  'Chilean election',
+  'Venezuelan election',
+  'Peruvian election',
 ];
 
 export function getTrackedQueries(): string[] {
