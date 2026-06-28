@@ -21,11 +21,14 @@ export async function emergingNarratives(sinceDays = 14, minRecent = 3): Promise
   const supabase = getSupabaseAdmin();
   if (!supabase) throw new Error('Supabase admin client not configured');
 
-  const since = new Date(Date.now() - sinceDays * 86400000).toISOString();
+  // Key off the message's POST date (when published), not analyzed_at (when
+  // processed) — otherwise a backfill makes everything look "new". Filter the
+  // window in JS to avoid unreliable filtering on embedded columns.
+  const sinceMs = Date.now() - sinceDays * 86400000;
   const { data, error } = await supabase
     .from('sigma_findings')
-    .select('topics, sentiment_score, analyzed_at')
-    .gte('analyzed_at', since)
+    .select('topics, sentiment_score, sigma_messages!inner(posted_at)')
+    .order('analyzed_at', { ascending: false })
     .limit(8000);
   if (error) throw new Error(error.message);
 
@@ -33,7 +36,11 @@ export async function emergingNarratives(sinceDays = 14, minRecent = 3): Promise
   const stats = new Map<string, { recent: number; prior: number; recentSentSum: number; recentSentN: number }>();
 
   for (const f of data ?? []) {
-    const recent = new Date((f as any).analyzed_at).getTime() >= midpoint;
+    const postedAt = (f as any).sigma_messages?.posted_at;
+    if (!postedAt) continue;
+    const postedMs = new Date(postedAt).getTime();
+    if (isNaN(postedMs) || postedMs < sinceMs) continue;
+    const recent = postedMs >= midpoint;
     const sent = (f as any).sentiment_score;
     for (const t of new Set(((f as any).topics ?? []).map((x: string) => canonicalizeEntity(x)))) {
       const topic = t as string;

@@ -14,9 +14,47 @@ const STATUS_STYLE: Record<string, string> = {
   rising: 'bg-amber-100 text-amber-700',
 };
 
+function EntityGraph({ nodes, edges }: { nodes: any[]; edges: any[] }) {
+  const W = 860, H = 420, cx = W / 2, cy = H / 2;
+  const N = Math.min(nodes.length, 40);
+  const shown = nodes.slice(0, N);
+  const radius = Math.min(W, H) / 2 - 60;
+  const pos = new Map<string, { x: number; y: number }>();
+  shown.forEach((n, i) => {
+    const ang = (i / N) * Math.PI * 2 - Math.PI / 2;
+    // Higher-weight nodes sit slightly inward.
+    const r = radius * (0.7 + 0.3 * (1 - i / N));
+    pos.set(n.id, { x: cx + r * Math.cos(ang), y: cy + r * Math.sin(ang) });
+  });
+  const maxW = Math.max(...shown.map((n) => n.weight), 1);
+  const maxE = Math.max(...edges.map((e) => e.weight), 1);
+  const typeColor: Record<string, string> = { organization: '#2563EB', location: '#10B981', topic: '#A855F7' };
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ maxHeight: 440 }}>
+      {edges.filter((e) => pos.has(e.source) && pos.has(e.target)).slice(0, 120).map((e, i) => {
+        const a = pos.get(e.source)!, b = pos.get(e.target)!;
+        return <line key={i} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#CBD5E1" strokeWidth={0.5 + (e.weight / maxE) * 3} strokeOpacity={0.5} />;
+      })}
+      {shown.map((n) => {
+        const p = pos.get(n.id)!;
+        const r = 4 + (n.weight / maxW) * 14;
+        return (
+          <g key={n.id}>
+            <circle cx={p.x} cy={p.y} r={r} fill={typeColor[n.type] ?? '#64748B'} fillOpacity={0.75} />
+            <text x={p.x} y={p.y - r - 2} textAnchor="middle" fontSize="9" fill="#334155">{n.id.length > 18 ? n.id.slice(0, 17) + '…' : n.id}</text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
 export default function IntelPage() {
   const [briefing, setBriefing] = useState<any>(null);
   const [emerging, setEmerging] = useState<any>(null);
+  const [alerts, setAlerts] = useState<any>(null);
+  const [graph, setGraph] = useState<any>(null);
   const [query, setQuery] = useState('');
   const [corrob, setCorrob] = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -25,12 +63,14 @@ export default function IntelPage() {
   const loadDash = useCallback(async () => {
     setLoading(true); setError('');
     try {
-      const [b, e] = await Promise.all([
+      const [b, e, al, g] = await Promise.all([
         fetch('/api/intel/briefing?days=30').then((r) => r.json()),
         fetch('/api/intel/emerging?days=30').then((r) => r.json()),
+        fetch('/api/intel/alerts?days=30').then((r) => r.json()),
+        fetch('/api/intel/graph?days=30').then((r) => r.json()),
       ]);
       if (b.error) throw new Error(b.error);
-      setBriefing(b); setEmerging(e);
+      setBriefing(b); setEmerging(e); setAlerts(al); setGraph(g);
     } catch (e: any) { setError(e.message); } finally { setLoading(false); }
   }, []);
 
@@ -56,6 +96,31 @@ export default function IntelPage() {
       <p className="text-sm text-gray-500 mb-6">Auto-briefing, emerging narratives, and cross-source corroboration. Aggregate regions/narratives.</p>
 
       {error && <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">{error}</div>}
+
+      {alerts?.alerts?.length > 0 && (
+        <div className="mb-6">
+          <h2 className="font-semibold mb-2">Active alerts ({alerts.alerts.length})</h2>
+          <div className="space-y-1">
+            {alerts.alerts.slice(0, 8).map((a: any) => {
+              const sev: Record<string, string> = { critical: 'bg-red-50 border-red-300 text-red-800', warning: 'bg-amber-50 border-amber-300 text-amber-800', info: 'bg-blue-50 border-blue-200 text-blue-800' };
+              return (
+                <div key={a.id} className={`text-sm border rounded px-3 py-1.5 ${sev[a.severity]}`}>
+                  <b className="uppercase text-[10px] mr-2">{a.severity}</b>
+                  <b>{a.subject}</b> — {a.message}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {graph?.nodes?.length > 0 && (
+        <div className="bg-white border rounded-lg p-4 mb-6">
+          <h2 className="font-semibold mb-2">Entity co-occurrence graph</h2>
+          <EntityGraph nodes={graph.nodes} edges={graph.edges} />
+          <p className="text-xs text-gray-400 mt-1">Orgs, places &amp; narratives that co-occur. Node size = mentions, edge thickness = co-occurrence. Persons excluded.</p>
+        </div>
+      )}
 
       {briefing && (
         <div className="bg-white border rounded-lg p-4 mb-6">
