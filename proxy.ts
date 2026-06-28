@@ -35,14 +35,6 @@ export async function proxy(request: NextRequest) {
 
     const { pathname } = request.nextUrl;
 
-    // Protect /dashboard routes
-    if (pathname.startsWith('/dashboard') && !user) {
-      const loginUrl = request.nextUrl.clone();
-      loginUrl.pathname = '/auth/login';
-      loginUrl.searchParams.set('next', pathname);
-      return NextResponse.redirect(loginUrl);
-    }
-
     // Redirect logged-in users away from auth pages
     if ((pathname.startsWith('/auth/login') || pathname.startsWith('/auth/signup')) && user) {
       const dashUrl = request.nextUrl.clone();
