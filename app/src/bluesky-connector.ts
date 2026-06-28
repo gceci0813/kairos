@@ -15,8 +15,10 @@ export class BlueskyConnector extends BaseDataConnector {
       requestsPerSecond: 1,
       requestsPerHour: 1000,
     });
-    this.identifier = identifier;
-    this.appPassword = appPassword;
+    // Strip any whitespace/newlines introduced when the values were pasted
+    // into the env var (a recurring gremlin in this project's setup).
+    this.identifier = identifier.replace(/\s/g, '');
+    this.appPassword = appPassword.replace(/\s/g, '');
   }
 
   private async ensureSession(): Promise<string> {
