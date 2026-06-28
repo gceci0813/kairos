@@ -106,6 +106,13 @@ function IconChevron({ right }: { right: boolean }) {
     </svg>
   );
 }
+function IconSigma() {
+  return (
+    <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+      <path fillRule="evenodd" d="M4 3a1 1 0 00-1 1v1.5a1 1 0 002 0V5h8.382l-3.764 4.522a1 1 0 000 1.282L13.382 15H5v-.5a1 1 0 10-2 0V16a1 1 0 001 1h11a1 1 0 00.78-1.625L11.05 10l4.73-5.375A1 1 0 0015 3H4z" clipRule="evenodd" />
+    </svg>
+  );
+}
 function IconCard() {
   return (
     <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
@@ -124,6 +131,7 @@ const baseNavItems = [
   { label: 'WATCHLIST', href: '/dashboard/watchlist',  Icon: IconWatchlist,   sub: 'Sanctions & Most Wanted'    },
   { label: 'DOCUMENTS', href: '/dashboard/documents',  Icon: IconFileSearch,  sub: 'Intelligence Extraction'    },
   { label: 'Live Feeds',href: '/dashboard/live',       Icon: IconSignal,    sub: 'Real-Time Intel Hub'        },
+  { label: 'SIGMA',     href: '/dashboard/sigma',      Icon: IconSigma,     sub: 'GDELT & Reddit Search'      },
   { label: 'Signals',   href: '/dashboard/map',      Icon: IconGlobe,  sub: 'Early Warning System' },
   { label: 'Reports',   href: '/dashboard/reports',  Icon: IconDoc                                },
   { label: 'Profile',   href: '/dashboard/profile',  Icon: IconCard, sub: 'My Account & Activity' },

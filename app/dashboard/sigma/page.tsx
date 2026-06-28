@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 
-export default function SigmaTestPage() {
+export default function SigmaPage() {
   const [query, setQuery] = useState('');
   const [source, setSource] = useState('');
   const [results, setResults] = useState<any[]>([]);
@@ -17,7 +17,7 @@ export default function SigmaTestPage() {
 
     setLoading(true);
     setError('');
-    
+
     try {
       const response = await fetch('/api/sigma', {
         method: 'POST',
@@ -46,7 +46,7 @@ export default function SigmaTestPage() {
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <h1 className="text-2xl font-bold mb-6">SIGMA Module Test</h1>
-      
+
       <div className="mb-4">
         <label className="block text-sm font-medium mb-2">Query:</label>
         <input
@@ -57,7 +57,7 @@ export default function SigmaTestPage() {
           placeholder="Enter search query..."
         />
       </div>
-      
+
       <div className="mb-4">
         <label className="block text-sm font-medium mb-2">Source (optional):</label>
         <select
@@ -70,7 +70,7 @@ export default function SigmaTestPage() {
           <option value="reddit">Reddit</option>
         </select>
       </div>
-      
+
       <button
         onClick={fetchData}
         disabled={loading}
@@ -78,13 +78,13 @@ export default function SigmaTestPage() {
       >
         {loading ? 'Searching...' : 'Search'}
       </button>
-      
+
       {error && (
         <div className="mt-4 p-3 bg-red-100 text-red-700 rounded">
           {error}
         </div>
       )}
-      
+
       {results.length > 0 && (
         <div className="mt-6">
           <h2 className="text-xl font-semibold mb-4">Results ({results.length})</h2>
@@ -93,13 +93,13 @@ export default function SigmaTestPage() {
               <div key={index} className="p-4 border rounded">
                 <h3 className="font-semibold">{result.content}</h3>
                 <p className="text-sm text-gray-600 mt-1">
-                  Source: {result.source} | Author: {result.author} | 
+                  Source: {result.source} | Author: {result.author} |
                   Date: {new Date(result.timestamp).toLocaleDateString()}
                 </p>
                 {result.metadata.url && (
-                  <a 
-                    href={result.metadata.url} 
-                    target="_blank" 
+                  <a
+                    href={result.metadata.url}
+                    target="_blank"
                     rel="noopener noreferrer"
                     className="text-blue-500 hover:underline text-sm"
                   >
