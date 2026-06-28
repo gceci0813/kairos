@@ -6,8 +6,11 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 let adminClient: SupabaseClient | null = null;
 
 export function getSupabaseAdmin(): SupabaseClient | null {
-  const url = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').trim();
-  const serviceKey = (process.env.SUPABASE_SERVICE_ROLE_KEY ?? '').trim();
+  // Strip ALL whitespace/newlines — pasted keys sometimes wrap and embed a
+  // newline mid-string, which .trim() won't catch and which breaks the
+  // Authorization header.
+  const url = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').replace(/\s/g, '');
+  const serviceKey = (process.env.SUPABASE_SERVICE_ROLE_KEY ?? '').replace(/\s/g, '');
   if (!url || !serviceKey) return null;
 
   if (!adminClient) {
