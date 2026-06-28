@@ -87,7 +87,7 @@ export default function HomePage() {
           </div>
           <span className="text-[10px] font-bold text-[#DC2626] tracking-widest uppercase">Live</span>
         </div>
-        <Link href="/auth/login"
+        <Link href="/dashboard"
           className="text-sm font-semibold text-[#94A3B8] hover:text-white transition-colors">
           Sign In &rarr;
         </Link>
@@ -146,7 +146,7 @@ export default function HomePage() {
 
         {/* CTAs */}
         <div className="flex flex-col sm:flex-row items-center gap-3">
-          <Link href="/auth/login"
+          <Link href="/dashboard"
             className="w-full sm:w-auto bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-sm font-semibold rounded-lg px-9 py-3.5 transition-colors"
             style={{ boxShadow: '0 0 24px rgba(37,99,235,0.35)' }}>
             Access Platform &rarr;
