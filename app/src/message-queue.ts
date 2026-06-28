@@ -6,7 +6,10 @@ import { Redis } from '@upstash/redis';
 
 export interface MessageQueue<T> {
   publish(topic: string, messages: T[]): Promise<void>;
-  consume(topic: string): Promise<T[]>;
+  // Reads up to `count` oldest messages and removes them from the queue.
+  consume(topic: string, count?: number): Promise<T[]>;
+  // Number of messages currently waiting.
+  size(topic: string): Promise<number>;
 }
 
 export class InProcessQueue<T> implements MessageQueue<T> {
@@ -17,10 +20,15 @@ export class InProcessQueue<T> implements MessageQueue<T> {
     this.topics.set(topic, [...existing, ...messages]);
   }
 
-  async consume(topic: string): Promise<T[]> {
-    const messages = this.topics.get(topic) ?? [];
-    this.topics.set(topic, []);
-    return messages;
+  async consume(topic: string, count = Infinity): Promise<T[]> {
+    const all = this.topics.get(topic) ?? [];
+    const take = all.slice(0, count);
+    this.topics.set(topic, all.slice(count));
+    return take;
+  }
+
+  async size(topic: string): Promise<number> {
+    return (this.topics.get(topic) ?? []).length;
   }
 }
 
@@ -53,33 +61,35 @@ export class RedisStreamsQueue<T> implements MessageQueue<T> {
     }
   }
 
-  async consume(topic: string): Promise<T[]> {
-    const cursor = (await this.redis.get<string>(this.cursorKey(topic))) ?? '0';
-    const entries = (await this.redis.xrange(this.streamKey(topic), cursor, '+')) as Record<
+  // Correct, non-lossy consume: read the oldest `count` entries, then XDEL
+  // exactly those ids. No cursor, no re-publishing — an entry is returned once
+  // and removed, so nothing is skipped or duplicated.
+  async consume(topic: string, count = 100): Promise<T[]> {
+    const key = this.streamKey(topic);
+    const entries = (await this.redis.xrange(key, '-', '+', count)) as Record<
       string,
       { data: unknown }
     >;
 
     const ids = Object.keys(entries);
+    if (ids.length === 0) return [];
+
     const results: T[] = [];
-    let lastId = cursor;
     for (const id of ids) {
-      if (id === cursor) continue; // skip the inclusive boundary already consumed
       const raw = entries[id]?.data;
-      // @upstash/redis may auto-deserialize JSON, so `data` can arrive as a
-      // string OR an already-parsed object. Handle both.
       try {
         results.push((typeof raw === 'string' ? JSON.parse(raw) : raw) as T);
       } catch {
         if (raw !== undefined) results.push(raw as T);
       }
-      lastId = id;
     }
 
-    if (lastId !== cursor) {
-      await this.redis.set(this.cursorKey(topic), lastId);
-    }
+    await this.redis.xdel(key, ids);
     return results;
+  }
+
+  async size(topic: string): Promise<number> {
+    return (await this.redis.xlen(this.streamKey(topic))) as number;
   }
 }
 

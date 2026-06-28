@@ -28,16 +28,9 @@ export async function runProcess(maxItems = MAX_PER_RUN): Promise<ProcessResult>
   }
 
   const queue = getMessageQueue<QueuedMessage>();
-  const drained = await queue.consume(NLP_TOPIC);
-  if (drained.length === 0) {
+  const batch = await queue.consume(NLP_TOPIC, maxItems);
+  if (batch.length === 0) {
     return { consumed: 0, findingsWritten: 0, errors: [] };
-  }
-
-  const batch = drained.slice(0, maxItems);
-  const leftover = drained.slice(maxItems);
-  // Re-queue anything beyond this run's budget so it isn't lost.
-  if (leftover.length > 0) {
-    await queue.publish(NLP_TOPIC, leftover);
   }
 
   const errors: string[] = [];

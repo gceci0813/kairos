@@ -24,10 +24,13 @@ export async function GET(request: NextRequest) {
     const topic = 'healthcheck';
     const token = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     await queue.publish(topic, [{ ping: token, at: Date.now() }]);
-    const consumed = await queue.consume(topic);
+    const consumed = await queue.consume(topic, 100);
     const roundTripOk = consumed.some((m) => m.ping === token);
 
-    return NextResponse.json({ backend, roundTripOk, consumedCount: consumed.length });
+    // Also report the real NLP backlog depth.
+    const nlpBacklog = await queue.size('nlp');
+
+    return NextResponse.json({ backend, roundTripOk, consumedCount: consumed.length, nlpBacklog });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Queue check failed';
     return NextResponse.json({ backend, error: message }, { status: 500 });
