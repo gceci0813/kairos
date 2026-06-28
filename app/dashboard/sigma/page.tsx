@@ -87,6 +87,7 @@ export default function SigmaPage() {
           <option value="twitter">X/Twitter</option>
           <option value="youtube">YouTube</option>
           <option value="telegram">Telegram</option>
+          <option value="bluesky">Bluesky</option>
         </select>
         <p className="text-xs text-gray-400 mt-1">
           Sources without configured API credentials will be skipped automatically.

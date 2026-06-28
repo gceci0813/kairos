@@ -28,10 +28,10 @@ export async function ingestQuery(query: string): Promise<QueryIngestResult> {
   const sourcesUsed: string[] = [];
   const available = connectorManager.getAvailableSources();
 
-  // News-oriented connectors only (skip Reddit/Twitter/etc here).
-  const newsSources = ['newsapi', 'gdelt'].filter((s) => available.includes(s));
+  // News + free social (Bluesky) connectors.
+  const newsSources = ['newsapi', 'gdelt', 'bluesky'].filter((s) => available.includes(s));
   if (newsSources.length === 0) {
-    return { query, sources: [], fetched: 0, upserted: 0, queued: 0, errors: ['No news connectors configured (need NEWSAPI_KEY and/or GDELT_API_KEY)'] };
+    return { query, sources: [], fetched: 0, upserted: 0, queued: 0, errors: ['No news/social connectors configured'] };
   }
 
   const allRows: { channel: string; msg_key: string; content: string; author: string; posted_at: string; url: string | null }[] = [];

@@ -5,6 +5,7 @@ import { NewsAPIConnector } from './newsapi-connector';
 import { TwitterConnector } from './twitter-connector';
 import { YouTubeConnector } from './youtube-connector';
 import { TelegramConnector } from './telegram-connector';
+import { BlueskyConnector } from './bluesky-connector';
 
 const CACHE_TTL_MS = 60 * 1000;
 
@@ -49,6 +50,9 @@ export class ConnectorManager {
         this.connectors.set('telegram', new TelegramConnector(channels));
       }
     }
+
+    // Bluesky needs no credentials — public AppView API. Always available.
+    this.connectors.set('bluesky', new BlueskyConnector());
   }
 
   private getCached(key: string): StandardizedData[] | undefined {
