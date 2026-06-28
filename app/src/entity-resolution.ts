@@ -96,7 +96,9 @@ const ALIASES: Record<string, string> = {
 
 export function canonicalizeEntity(raw: string): string {
   if (!raw) return raw;
-  let s = raw.toLowerCase().trim().replace(/\s+/g, ' ');
+  // Normalize Unicode (NFKC) so visually-identical Cyrillic/Latin forms with
+  // different byte sequences compare equal against the alias map.
+  let s = raw.normalize('NFKC').toLowerCase().trim().replace(/\s+/g, ' ');
   // Strip leading honorifics (possibly several).
   let changed = true;
   while (changed) {
