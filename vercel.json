@@ -3,6 +3,10 @@
     {
       "path": "/api/sigma/ingest",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/sigma/process",
+      "schedule": "0 7 * * *"
     }
   ]
 }

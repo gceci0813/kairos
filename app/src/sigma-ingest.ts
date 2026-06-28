@@ -1,5 +1,8 @@
 import { getSupabaseAdmin } from './supabase-admin';
 import { TelegramConnector } from './telegram-connector';
+import { getMessageQueue } from './message-queue';
+
+export const NLP_TOPIC = 'nlp';
 
 // Vercel Hobby caps function duration at 60s. Each channel preview fetch is
 // ~0.5-1s, so we process a conservative batch per run to stay well clear of
@@ -9,6 +12,7 @@ const BATCH_SIZE = 40;
 export interface IngestResult {
   channelsProcessed: number;
   messagesUpserted: number;
+  queued: number;
   errors: string[];
 }
 
@@ -28,11 +32,13 @@ export async function runIngest(batchSize = BATCH_SIZE): Promise<IngestResult> {
 
   if (error) throw new Error(`Failed to load channels: ${error.message}`);
   if (!channels || channels.length === 0) {
-    return { channelsProcessed: 0, messagesUpserted: 0, errors: ['No channels seeded'] };
+    return { channelsProcessed: 0, messagesUpserted: 0, queued: 0, errors: ['No channels seeded'] };
   }
 
   const errors: string[] = [];
+  const queue = getMessageQueue<{ msg_key: string; channel: string; content: string }>();
   let messagesUpserted = 0;
+  let queued = 0;
   const nowIso = new Date().toISOString();
 
   for (const { username } of channels) {
@@ -58,6 +64,14 @@ export async function runIngest(batchSize = BATCH_SIZE): Promise<IngestResult> {
           errors.push(`${username}: ${upsertError.message}`);
         } else {
           messagesUpserted += rows.length;
+          // Publish to the NLP queue for async processing. The process worker
+          // consumes these and writes findings; ingest stays fast and isn't
+          // blocked on per-message LLM calls.
+          await queue.publish(
+            NLP_TOPIC,
+            rows.map((r) => ({ msg_key: r.msg_key, channel: r.channel, content: r.content }))
+          );
+          queued += rows.length;
         }
       }
 
@@ -70,5 +84,5 @@ export async function runIngest(batchSize = BATCH_SIZE): Promise<IngestResult> {
     }
   }
 
-  return { channelsProcessed: channels.length, messagesUpserted, errors };
+  return { channelsProcessed: channels.length, messagesUpserted, queued, errors };
 }
