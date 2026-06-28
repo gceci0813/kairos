@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { ImageProcessor } from './src/imageProcessor';
-import { LocationTracker } from './src/locationTracker'
+import { ImageProcessor } from '../src/imageProcessor';
+import { LocationTracker } from '../src/locationTracker'
 import { VehicleIdentifier } from './src/vehicleIdentifier';
 
 export default function IntelligencePage() {
