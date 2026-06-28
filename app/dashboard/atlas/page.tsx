@@ -24,15 +24,34 @@ function sentimentColor(s: number): string {
 export default function AtlasPage() {
   const [query, setQuery] = useState('');
   const [days, setDays] = useState(30);
+  const [level, setLevel] = useState<'all' | 'country' | 'city'>('all');
   const [features, setFeatures] = useState<Feature[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [drill, setDrill] = useState<any>(null);
+  const [drillLoading, setDrillLoading] = useState(false);
+
+  const openDrill = useCallback(async (place: string) => {
+    setDrillLoading(true);
+    setDrill({ place, narratives: [], totalMentions: 0 });
+    try {
+      const res = await fetch(`/api/atlas/region?place=${encodeURIComponent(place)}&days=${days}`);
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || `Error ${res.status}`);
+      setDrill(d);
+    } catch (e: any) {
+      setError(e.message);
+      setDrill(null);
+    } finally {
+      setDrillLoading(false);
+    }
+  }, [days]);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const params = new URLSearchParams({ format: 'features', days: String(days) });
+      const params = new URLSearchParams({ format: 'features', days: String(days), level });
       if (query.trim()) params.set('query', query.trim());
       const res = await fetch(`/api/atlas/geojson?${params}`);
       if (!res.ok) {
@@ -46,7 +65,7 @@ export default function AtlasPage() {
     } finally {
       setLoading(false);
     }
-  }, [query, days]);
+  }, [query, days, level]);
 
   useEffect(() => {
     load();
@@ -79,6 +98,14 @@ export default function AtlasPage() {
             <option value={30}>30 days</option>
             <option value={90}>90 days</option>
             <option value={365}>1 year</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">Level</label>
+          <select value={level} onChange={(e) => setLevel(e.target.value as any)} className="p-2 border rounded">
+            <option value="all">All places</option>
+            <option value="country">Country (roll up cities)</option>
+            <option value="city">City only</option>
           </select>
         </div>
         <button onClick={load} disabled={loading} className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-400">
@@ -117,7 +144,11 @@ export default function AtlasPage() {
       )}
       <div className="space-y-2">
         {features.map((f) => (
-          <div key={f.place} className="flex items-center gap-3 p-3 border rounded">
+          <button
+            key={f.place}
+            onClick={() => openDrill(f.place)}
+            className="w-full text-left flex items-center gap-3 p-3 border rounded hover:bg-slate-50 transition-colors"
+          >
             <span className="inline-block w-3 h-3 rounded-full" style={{ background: sentimentColor(f.avgSentiment) }} />
             <span className="font-semibold w-40">{f.place}</span>
             <span className="text-sm text-gray-600">{f.mentions} mentions</span>
@@ -125,9 +156,38 @@ export default function AtlasPage() {
             {f.topics.length > 0 && (
               <span className="text-xs text-gray-500 ml-auto">{f.topics.slice(0, 4).join(' · ')}</span>
             )}
-          </div>
+          </button>
         ))}
       </div>
+
+      {drill && (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center p-4 z-50" onClick={() => setDrill(null)}>
+          <div className="bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[80vh] overflow-auto p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold">{drill.place} — narratives</h3>
+              <button onClick={() => setDrill(null)} className="text-gray-400 hover:text-gray-700">✕</button>
+            </div>
+            {drillLoading ? (
+              <p className="text-sm text-gray-500">Loading…</p>
+            ) : (
+              <>
+                <p className="text-sm text-gray-500 mb-3">{drill.totalMentions} findings reference this region (incl. its cities)</p>
+                <div className="space-y-2">
+                  {(drill.narratives || []).slice(0, 20).map((n: any) => (
+                    <div key={n.topic} className="flex items-center gap-3 p-2 border rounded">
+                      <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: sentimentColor(n.avgSentiment) }} />
+                      <span className="flex-1 text-sm">{n.topic}</span>
+                      <span className="text-xs text-gray-600">{n.mentions}</span>
+                      <span className="text-xs text-gray-400">{n.avgSentiment.toFixed(2)}</span>
+                    </div>
+                  ))}
+                  {drill.narratives?.length === 0 && <p className="text-sm text-gray-500">No narratives found.</p>}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

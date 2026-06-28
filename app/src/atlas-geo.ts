@@ -1,5 +1,7 @@
 import { getSupabaseAdmin } from './supabase-admin';
-import { GeoPoint, lookupPlace } from './atlas-gazetteer';
+import { GeoPoint, lookupPlace, GAZETTEER } from './atlas-gazetteer';
+
+export type GeoLevel = 'all' | 'country' | 'city';
 
 // Aggregate geographic analysis over the findings corpus. Operates purely on
 // location ENTITIES (place names) and narratives/topics — never on individuals.
@@ -51,8 +53,33 @@ async function loadFindings(query: string | null, sinceDays: number, limit = 500
   return (data ?? []) as FindingRow[];
 }
 
+// Find a country GeoPoint by canonical country name, for city→country rollup.
+function countryPoint(countryName: string): GeoPoint | null {
+  for (const p of Object.values(GAZETTEER)) {
+    if (p.kind === 'country' && p.canonical === countryName) return p;
+  }
+  return null;
+}
+
+// Resolve a place to the GeoPoint it should aggregate under, given the level.
+// level=country rolls cities up to their country; level=city keeps only cities;
+// level=all keeps each place as-is.
+function resolveForLevel(point: GeoPoint, level: GeoLevel): GeoPoint | null {
+  if (level === 'all') return point;
+  if (level === 'city') return point.kind === 'city' ? point : null;
+  // level === 'country'
+  if (point.kind === 'country') return point;
+  // city → its country
+  if (point.country) return countryPoint(point.country) ?? null;
+  return null;
+}
+
 // Build place → aggregate density from location entities.
-export async function geographicDensity(query: string | null, sinceDays = 30): Promise<DensityFeature[]> {
+export async function geographicDensity(
+  query: string | null,
+  sinceDays = 30,
+  level: GeoLevel = 'all'
+): Promise<DensityFeature[]> {
   const findings = await loadFindings(query, sinceDays);
 
   const acc = new Map<string, { point: GeoPoint; mentions: number; sentSum: number; sentN: number; topics: Map<string, number> }>();
@@ -60,8 +87,10 @@ export async function geographicDensity(query: string | null, sinceDays = 30): P
   for (const f of findings) {
     const locations = (f.entities ?? []).filter((e) => e.type === 'location');
     for (const loc of locations) {
-      const point = lookupPlace(loc.text);
-      if (!point) continue; // only map places we can position; unknown names skipped
+      const raw = lookupPlace(loc.text);
+      if (!raw) continue; // only map places we can position; unknown names skipped
+      const point = resolveForLevel(raw, level);
+      if (!point) continue;
       const key = point.canonical;
       if (!acc.has(key)) acc.set(key, { point, mentions: 0, sentSum: 0, sentN: 0, topics: new Map() });
       const a = acc.get(key)!;
@@ -88,6 +117,61 @@ export async function geographicDensity(query: string | null, sinceDays = 30): P
         .map(([t]) => t),
     }))
     .sort((x, y) => y.mentions - x.mentions);
+}
+
+// Per-region drill-down: for a given place (country or city), return the top
+// narratives/topics with their volume and sentiment. Matches both the place
+// itself and (for countries) its cities, so drilling into "Russia" includes
+// Moscow/Rostov mentions.
+export interface RegionNarrative {
+  topic: string;
+  mentions: number;
+  avgSentiment: number;
+}
+
+export async function regionNarratives(
+  place: string,
+  sinceDays = 30
+): Promise<{ place: string; totalMentions: number; narratives: RegionNarrative[] }> {
+  const findings = await loadFindings(null, sinceDays);
+  const target = place.toLowerCase().trim();
+
+  const topics = new Map<string, { mentions: number; sentSum: number; sentN: number }>();
+  let totalMentions = 0;
+
+  for (const f of findings) {
+    const places = (f.entities ?? [])
+      .filter((e) => e.type === 'location')
+      .map((e) => lookupPlace(e.text))
+      .filter((p): p is GeoPoint => !!p);
+
+    // Does this finding reference the target place (or a city within it)?
+    const matches = places.some(
+      (p) => p.canonical.toLowerCase() === target || (p.country ?? '').toLowerCase() === target
+    );
+    if (!matches) continue;
+    totalMentions++;
+
+    for (const t of new Set(f.topics ?? [])) {
+      if (!topics.has(t)) topics.set(t, { mentions: 0, sentSum: 0, sentN: 0 });
+      const e = topics.get(t)!;
+      e.mentions++;
+      if (typeof f.sentiment_score === 'number') {
+        e.sentSum += f.sentiment_score;
+        e.sentN++;
+      }
+    }
+  }
+
+  const narratives = Array.from(topics.entries())
+    .map(([topic, e]) => ({
+      topic,
+      mentions: e.mentions,
+      avgSentiment: e.sentN > 0 ? e.sentSum / e.sentN : 0,
+    }))
+    .sort((a, b) => b.mentions - a.mentions);
+
+  return { place, totalMentions, narratives };
 }
 
 export function toGeoJSON(features: DensityFeature[]) {

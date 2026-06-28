@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { geographicDensity, toGeoJSON } from '../../../src/atlas-geo';
+import { GeoLevel, geographicDensity, toGeoJSON } from '../../../src/atlas-geo';
 
 export const maxDuration = 60;
 
@@ -12,7 +12,9 @@ export async function GET(request: NextRequest) {
     const params = new URL(request.url).searchParams;
     const query = params.get('query');
     const days = Math.min(parseInt(params.get('days') || '30', 10) || 30, 365);
-    const features = await geographicDensity(query, days);
+    const levelParam = params.get('level');
+    const level: GeoLevel = levelParam === 'country' || levelParam === 'city' ? levelParam : 'all';
+    const features = await geographicDensity(query, days, level);
 
     if (params.get('format') === 'features') {
       return NextResponse.json({ features });
