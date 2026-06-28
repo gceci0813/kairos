@@ -43,3 +43,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 .env*.local
+
+# Large raw channel dump — only the curated seed (telegram-seed.json) is used
+data/telegram-top-25k.json

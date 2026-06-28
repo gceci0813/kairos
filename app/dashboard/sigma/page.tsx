@@ -13,13 +13,14 @@ export default function SigmaPage() {
   const [query, setQuery] = useState('');
   const [source, setSource] = useState('');
   const [analyze, setAnalyze] = useState(false);
+  const [stored, setStored] = useState(false);
   const [results, setResults] = useState<any[]>([]);
   const [findings, setFindings] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const fetchData = async () => {
-    if (!query.trim()) {
+    if (!query.trim() && !stored) {
       setError('Please enter a query');
       return;
     }
@@ -37,6 +38,7 @@ export default function SigmaPage() {
           query,
           source: source || undefined,
           analyze,
+          stored,
         }),
       });
 
@@ -91,9 +93,14 @@ export default function SigmaPage() {
         </p>
       </div>
 
-      <label className="flex items-center gap-2 mb-4 text-sm font-medium">
+      <label className="flex items-center gap-2 mb-2 text-sm font-medium">
         <input type="checkbox" checked={analyze} onChange={(e) => setAnalyze(e.target.checked)} />
         Run NLP analysis (sentiment, entities, topics, coordination signals)
+      </label>
+
+      <label className="flex items-center gap-2 mb-4 text-sm font-medium">
+        <input type="checkbox" checked={stored} onChange={(e) => setStored(e.target.checked)} />
+        Search stored Telegram index (instant; from the ingested channel store)
       </label>
 
       <button
