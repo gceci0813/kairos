@@ -34,12 +34,15 @@ export default function Nav() {
 
         {/* Desktop links */}
         <div className="hidden md:flex items-center gap-10">
-          {['Platform', 'Products', 'Clients', 'Intelligence'].map((item) => (
-            <a key={item} href={`#${item.toLowerCase()}`}
-              className="font-mono-custom text-[0.75rem] tracking-[0.2em] uppercase text-[#475569] hover:text-[#3B82F6] transition-colors duration-300">
-              {item}
-            </a>
-          ))}
+          {['Platform', 'Products', 'Clients', 'Intelligence', 'Location Intelligence'].map((item) => {
+            const href = item === 'Location Intelligence' ? '/location-test' : `#${item.toLowerCase()}`;
+            return (
+              <a key={item} href={href}
+                className="font-mono-custom text-[0.75rem] tracking-[0.2em] uppercase text-[#475569] hover:text-[#3B82F6] transition-colors duration-300">
+                {item}
+              </a>
+            );
+          })}
         </div>
 
         {/* CTA */}
@@ -67,13 +70,16 @@ export default function Nav() {
       {/* Mobile menu */}
       {menuOpen && (
         <div className="md:hidden bg-white border-t border-[#E2E8F0] px-6 py-6 flex flex-col gap-6">
-          {['Platform', 'Products', 'Clients', 'Intelligence'].map((item) => (
-            <a key={item} href={`#${item.toLowerCase()}`}
-              className="font-mono-custom text-[0.8rem] tracking-[0.2em] uppercase text-[#475569]"
-              onClick={() => setMenuOpen(false)}>
-              {item}
-            </a>
-          ))}
+          {['Platform', 'Products', 'Clients', 'Intelligence', 'Location Intelligence'].map((item) => {
+            const href = item === 'Location Intelligence' ? '/location-test' : `#${item.toLowerCase()}`;
+            return (
+              <a key={item} href={href}
+                className="font-mono-custom text-[0.8rem] tracking-[0.2em] uppercase text-[#475569]"
+                onClick={() => setMenuOpen(false)}>
+                {item}
+              </a>
+            );
+          })}
           <Link href="/auth/signup" className="font-mono-custom text-[0.8rem] tracking-[0.2em] uppercase bg-[#2563EB] text-white px-5 py-3 text-center">
             Request Access
           </Link>
