@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from './supabase-admin';
 import { lookupPlace } from './atlas-gazetteer';
+import { canonicalizeEntity } from './entity-resolution';
 
 // Aggregate forecasting/analytics over the findings corpus, keyed on REGIONS
 // (places) and NARRATIVES (topics) — never individuals. Powers ORACLE's
@@ -118,7 +119,8 @@ export async function regionalAssessments(
         .filter((x): x is string => !!x)
     );
     for (const p of places) add(regions, p, f, recent);
-    for (const t of new Set(f.topics ?? [])) add(narratives, t, f, recent);
+    // Canonicalize narrative/topic labels so variants merge.
+    for (const t of new Set((f.topics ?? []).map((x) => canonicalizeEntity(x)))) add(narratives, t, f, recent);
   }
 
   const assess = (map: Map<string, Bucket>, kind: 'region' | 'narrative'): RegionalAssessment[] => {

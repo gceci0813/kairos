@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from './supabase-admin';
 import { CorpusFilter, passesFilter } from './corpus-filter';
+import { canonicalizeEntity } from './entity-resolution';
 
 // Aggregate political-trend analytics over the findings corpus. Treats named
 // entities (candidates, parties, organizations, places) as TOPICS in public
@@ -63,9 +64,12 @@ function wilsonInterval(p: number, n: number, z = 1.96): [number, number] {
 }
 
 function mentionsEntity(f: FindingRow, name: string): boolean {
-  const target = name.toLowerCase();
-  if ((f.entities ?? []).some((e) => e.text.toLowerCase().includes(target))) return true;
-  if ((f.topics ?? []).some((t) => t.toLowerCase().includes(target))) return true;
+  // Match on canonical form so "Donald Trump"/"President Trump"/"Trump" all
+  // resolve to the same entity instead of fragmenting the count.
+  const target = canonicalizeEntity(name);
+  const targetLower = name.toLowerCase();
+  if ((f.entities ?? []).some((e) => canonicalizeEntity(e.text) === target || e.text.toLowerCase().includes(targetLower))) return true;
+  if ((f.topics ?? []).some((t) => t.toLowerCase().includes(targetLower))) return true;
   return false;
 }
 
