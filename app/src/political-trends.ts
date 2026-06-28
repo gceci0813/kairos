@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from './supabase-admin';
+import { CorpusFilter, passesFilter } from './corpus-filter';
 
 // Aggregate political-trend analytics over the findings corpus. Treats named
 // entities (candidates, parties, organizations, places) as TOPICS in public
@@ -12,19 +13,35 @@ interface FindingRow {
   coordination: { isFlagged?: boolean } | null;
   analyzed_at: string;
   channel: string | null;
+  language: string | null;
+  posted_at: string | null;
 }
 
-async function loadFindings(sinceDays: number, limit = 8000): Promise<FindingRow[]> {
+async function loadFindings(filter: CorpusFilter, limit = 8000): Promise<FindingRow[]> {
   const supabase = getSupabaseAdmin();
   if (!supabase) throw new Error('Supabase admin client not configured');
-  const since = new Date(Date.now() - sinceDays * 86400000).toISOString();
+  const since = new Date(Date.now() - filter.sinceDays * 86400000).toISOString();
+  // Embed the message's posted_at so we can filter by real content recency.
   const { data, error } = await supabase
     .from('sigma_findings')
-    .select('entities, topics, sentiment_score, coordination, analyzed_at, channel')
+    .select('entities, topics, sentiment_score, coordination, analyzed_at, channel, language, sigma_messages!inner(posted_at)')
     .gte('analyzed_at', since)
     .limit(limit);
   if (error) throw new Error(error.message);
-  return (data ?? []) as FindingRow[];
+
+  const rows: FindingRow[] = (data ?? []).map((r: any) => ({
+    entities: r.entities,
+    topics: r.topics,
+    sentiment_score: r.sentiment_score,
+    coordination: r.coordination,
+    analyzed_at: r.analyzed_at,
+    channel: r.channel,
+    language: r.language,
+    posted_at: r.sigma_messages?.posted_at ?? null,
+  }));
+
+  // Apply quality filters (curated source / language / content recency).
+  return rows.filter((row) => passesFilter(row, filter));
 }
 
 // Herfindahl-Hirschman Index over source shares: 1 = single source (max
@@ -78,9 +95,9 @@ export interface EntityTrend {
   effectiveSampleSize: number;
 }
 
-export async function entitySentimentSeries(entity: string, sinceDays = 30): Promise<EntityTrend> {
-  const findings = await loadFindings(sinceDays);
-  return computeTrend(entity, findings, sinceDays);
+export async function entitySentimentSeries(entity: string, filter: CorpusFilter): Promise<EntityTrend> {
+  const findings = await loadFindings(filter);
+  return computeTrend(entity, findings, filter.sinceDays);
 }
 
 function computeTrend(entity: string, findings: FindingRow[], sinceDays: number): EntityTrend {
@@ -182,7 +199,7 @@ function reliabilityOf(effectiveN: number, distinctSources: number): Reliability
 // loud source can't dominate the field.
 export async function electionForecast(
   candidates: string[],
-  sinceDays = 30,
+  filter: CorpusFilter,
   weights = { sentiment: 0.5, volume: 0.3, momentum: 0.2 },
   sourceWeighted = true
 ): Promise<{
@@ -192,7 +209,9 @@ export async function electionForecast(
   field: CandidateForecast[];
   caveats: string[];
 }> {
-  const trends = await Promise.all(candidates.map((c) => entitySentimentSeries(c, sinceDays)));
+  // One corpus fetch, reused across candidates.
+  const findings = await loadFindings(filter);
+  const trends = candidates.map((c) => computeTrend(c, findings, filter.sinceDays));
 
   const volumeBasis = (t: EntityTrend) => (sourceWeighted ? t.effectiveSampleSize : t.totalVolume);
   const totalBasis = trends.reduce((a, t) => a + volumeBasis(t), 0) || 1;
@@ -244,5 +263,5 @@ export async function electionForecast(
     caveats.push('One or more candidates have low effective sample size or few distinct sources — treat their figures as indicative only.');
   }
 
-  return { asOf: new Date().toISOString(), windowDays: sinceDays, sourceWeighted, field, caveats };
+  return { asOf: new Date().toISOString(), windowDays: filter.sinceDays, sourceWeighted, field, caveats };
 }

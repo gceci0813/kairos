@@ -41,6 +41,9 @@ function Stat({ label, value }: { label: string; value: any }) {
 export default function PoliticalPage() {
   const [entity, setEntity] = useState('');
   const [days, setDays] = useState(30);
+  const [curatedOnly, setCuratedOnly] = useState(false);
+  const [language, setLanguage] = useState('');
+  const [maxAge, setMaxAge] = useState(0);
   const [trend, setTrend] = useState<any>(null);
   const [candidates, setCandidates] = useState('');
   const [forecast, setForecast] = useState<any>(null);
@@ -64,7 +67,11 @@ export default function PoliticalPage() {
     if (!entity.trim()) return;
     setLoading(true); setError('');
     try {
-      const res = await fetch(`/api/political/trends?entity=${encodeURIComponent(entity.trim())}&days=${days}`);
+      const qs = new URLSearchParams({ entity: entity.trim(), days: String(days) });
+      if (curatedOnly) qs.set('curatedOnly', 'true');
+      if (language) qs.set('languages', language);
+      if (maxAge) qs.set('maxContentAgeDays', String(maxAge));
+      const res = await fetch(`/api/political/trends?${qs}`);
       const d = await res.json();
       if (!res.ok) throw new Error(d.error);
       setTrend(d);
@@ -78,7 +85,12 @@ export default function PoliticalPage() {
     try {
       const res = await fetch('/api/political/forecast', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ candidates: list, days }),
+        body: JSON.stringify({
+          candidates: list, days,
+          curatedOnly,
+          languages: language ? [language] : undefined,
+          maxContentAgeDays: maxAge || undefined,
+        }),
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error);
@@ -93,12 +105,28 @@ export default function PoliticalPage() {
         Aggregate sentiment trends and sentiment-weighted forecasting over public discourse. Treats candidates/parties as topics in open sources — no individual profiling.
       </p>
 
-      <div className="mb-4 flex gap-2 items-end">
+      <div className="mb-4 flex flex-wrap gap-4 items-end bg-slate-50 border rounded p-3">
         <label className="text-sm font-medium">Window
           <select value={days} onChange={(e) => setDays(Number(e.target.value))} className="ml-2 p-2 border rounded">
             <option value={7}>7d</option><option value={30}>30d</option><option value={90}>90d</option><option value={365}>1y</option>
           </select>
         </label>
+        <label className="text-sm font-medium">Language
+          <select value={language} onChange={(e) => setLanguage(e.target.value)} className="ml-2 p-2 border rounded">
+            <option value="">All</option><option value="en">en</option><option value="ar">ar</option>
+            <option value="ru">ru</option><option value="fa">fa</option><option value="es">es</option><option value="zh">zh</option>
+          </select>
+        </label>
+        <label className="text-sm font-medium">Max content age
+          <select value={maxAge} onChange={(e) => setMaxAge(Number(e.target.value))} className="ml-2 p-2 border rounded">
+            <option value={0}>any</option><option value={30}>30d</option><option value={90}>90d</option><option value={180}>180d</option><option value={365}>1y</option>
+          </select>
+        </label>
+        <label className="text-sm font-medium flex items-center gap-2">
+          <input type="checkbox" checked={curatedOnly} onChange={(e) => setCuratedOnly(e.target.checked)} />
+          Curated sources only
+        </label>
+        <span className="text-xs text-gray-400">Quality filters apply to both trend & forecast.</span>
       </div>
 
       {error && <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">{error}</div>}
