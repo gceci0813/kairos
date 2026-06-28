@@ -44,14 +44,31 @@ export async function searchStoredFindings(query: string, limit = 100) {
     throw new Error('Supabase admin client not configured — set SUPABASE_SERVICE_ROLE_KEY');
   }
 
+  // Filtering on an embedded resource's column is unreliable in PostgREST, so
+  // when there's a query we first resolve matching message keys from
+  // sigma_messages (full-text search works directly there), then fetch the
+  // findings for those keys.
+  let matchKeys: string[] | null = null;
+  if (query.trim()) {
+    const { data: msgs, error: msgErr } = await supabase
+      .from('sigma_messages')
+      .select('msg_key')
+      .textSearch('content', query, { type: 'websearch', config: 'simple' })
+      .order('posted_at', { ascending: false })
+      .limit(limit);
+    if (msgErr) throw new Error(`Stored findings search failed: ${msgErr.message}`);
+    matchKeys = (msgs ?? []).map((m: any) => m.msg_key);
+    if (matchKeys.length === 0) return [];
+  }
+
   let q = supabase
     .from('sigma_findings')
     .select('msg_key, channel, finding, confidence, language, sentiment, sentiment_score, entities, topics, coordination, recommended_action, sigma_messages!inner(content, url, posted_at)')
     .order('analyzed_at', { ascending: false })
     .limit(limit);
 
-  if (query.trim()) {
-    q = q.textSearch('sigma_messages.content', query, { type: 'websearch', config: 'simple' });
+  if (matchKeys) {
+    q = q.in('msg_key', matchKeys);
   }
 
   const { data, error } = await q;
