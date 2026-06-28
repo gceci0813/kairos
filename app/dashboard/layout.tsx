@@ -156,6 +156,8 @@ const baseNavItems = [
   { label: 'Intel Lab', href: '/dashboard/intelligence', Icon: IconLab,     sub: 'Vehicle ID & Image Analysis (Demo)' },
   { label: 'Signals',   href: '/dashboard/map',      Icon: IconGlobe,  sub: 'Early Warning System' },
   { label: 'ATLAS',     href: '/dashboard/atlas',    Icon: IconAtlas,  sub: 'Geographic Analysis'  },
+  { label: 'POLITICAL', href: '/dashboard/political', Icon: IconChart, sub: 'Sentiment & Forecasting' },
+  { label: 'Intel Center', href: '/dashboard/intel', Icon: IconShield, sub: 'Briefings & Corroboration' },
   { label: 'Location Intelligence', href: '/location-test', Icon: IconLocation, sub: 'Geolocation Analysis' },
   { label: 'Reports',   href: '/dashboard/reports',  Icon: IconDoc                                },
   { label: 'Profile',   href: '/dashboard/profile',  Icon: IconCard, sub: 'My Account & Activity' },
