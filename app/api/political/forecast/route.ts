@@ -13,7 +13,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Provide at least 2 candidates' }, { status: 400 });
     }
     const days = Math.min(parseInt(String(body.days || 30), 10) || 30, 365);
-    const result = await electionForecast(candidates.slice(0, 12), days, body.weights);
+    const sourceWeighted = body.sourceWeighted !== false; // default on
+    const result = await electionForecast(candidates.slice(0, 12), days, body.weights, sourceWeighted);
     return NextResponse.json(result);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Forecast failed';

@@ -134,6 +134,13 @@ function IconCard() {
     </svg>
   );
 }
+function IconLocation() {
+  return (
+    <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+      <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+    </svg>
+  );
+}
 
 // ── Nav items ──────────────────────────────────────────────────────────────────
 
@@ -149,7 +156,7 @@ const baseNavItems = [
   { label: 'Intel Lab', href: '/dashboard/intelligence', Icon: IconLab,     sub: 'Vehicle ID & Image Analysis (Demo)' },
   { label: 'Signals',   href: '/dashboard/map',      Icon: IconGlobe,  sub: 'Early Warning System' },
   { label: 'ATLAS',     href: '/dashboard/atlas',    Icon: IconAtlas,  sub: 'Geographic Analysis'  },
-  { label: 'POLITICAL', href: '/dashboard/political', Icon: IconChart, sub: 'Sentiment & Forecasting' },
+  { label: 'Location Intelligence', href: '/location-test', Icon: IconLocation, sub: 'Geolocation Analysis' },
   { label: 'Reports',   href: '/dashboard/reports',  Icon: IconDoc                                },
   { label: 'Profile',   href: '/dashboard/profile',  Icon: IconCard, sub: 'My Account & Activity' },
   { label: 'Settings',  href: '/dashboard/settings', Icon: IconCog                                },

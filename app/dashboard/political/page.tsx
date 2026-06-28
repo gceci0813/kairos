@@ -112,22 +112,39 @@ export default function PoliticalPage() {
           <button onClick={runForecast} disabled={loading} className="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 disabled:bg-gray-400">Forecast</button>
         </div>
         {forecast && (
-          <div className="space-y-2">
-            {forecast.field.map((c: any) => (
-              <div key={c.candidate} className="flex items-center gap-3">
-                <span className="w-40 font-medium truncate">{c.candidate}</span>
-                <div className="flex-1 bg-slate-100 rounded h-5 overflow-hidden">
-                  <div className="h-full bg-purple-400 flex items-center justify-end pr-2 text-[10px] text-white"
-                    style={{ width: `${Math.max(6, c.probability * 100)}%` }}>
-                    {(c.probability * 100).toFixed(0)}%
+          <div className="space-y-3">
+            {forecast.field.map((c: any) => {
+              const relColor: Record<string, string> = {
+                'very low': 'bg-red-100 text-red-700', low: 'bg-amber-100 text-amber-700',
+                moderate: 'bg-blue-100 text-blue-700', high: 'bg-green-100 text-green-700',
+              };
+              return (
+                <div key={c.candidate} className="border rounded p-2">
+                  <div className="flex items-center gap-3">
+                    <span className="w-36 font-medium truncate">{c.candidate}</span>
+                    <div className="flex-1 bg-slate-100 rounded h-5 overflow-hidden relative">
+                      {/* CI band */}
+                      <div className="absolute top-0 h-full bg-purple-200"
+                        style={{ left: `${c.probabilityCI[0] * 100}%`, width: `${Math.max(1, (c.probabilityCI[1] - c.probabilityCI[0]) * 100)}%` }} />
+                      <div className="h-full bg-purple-500 flex items-center justify-end pr-2 text-[10px] text-white relative"
+                        style={{ width: `${Math.max(6, c.probability * 100)}%` }}>
+                        {(c.probability * 100).toFixed(0)}%
+                      </div>
+                    </div>
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${relColor[c.reliability]}`}>{c.reliability}</span>
+                  </div>
+                  <div className="text-[11px] text-gray-500 mt-1 ml-36 flex flex-wrap gap-x-4">
+                    <span>95% CI {(c.probabilityCI[0] * 100).toFixed(0)}–{(c.probabilityCI[1] * 100).toFixed(0)}%</span>
+                    <span>vol {c.volume} (n_eff {c.effectiveSampleSize})</span>
+                    <span>sources {c.sourceMix.distinctSources} (≈{c.sourceMix.effectiveSources.toFixed(1)} eff.)</span>
+                    <span>sentiment {c.avgSentiment.toFixed(2)}</span>
                   </div>
                 </div>
-                <span className="text-xs text-gray-500 w-28 text-right">vol {c.volume} · s {c.avgSentiment.toFixed(2)}</span>
-              </div>
-            ))}
-            <p className="text-xs text-gray-400 mt-2">
-              Probabilities are a sentiment-weighted share-of-voice estimate over public discourse — not a prediction of individual behavior or an official poll.
-            </p>
+              );
+            })}
+            <div className="text-xs text-gray-400 mt-2 space-y-0.5">
+              {(forecast.caveats || []).map((cav: string, i: number) => <p key={i}>• {cav}</p>)}
+            </div>
           </div>
         )}
       </div>
