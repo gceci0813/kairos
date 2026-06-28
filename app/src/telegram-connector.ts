@@ -53,7 +53,7 @@ export class TelegramConnector extends BaseDataConnector {
       const $el = $(el);
       const postId = $el.attr('data-post');
       const text = $el.find('.tgme_widget_message_text').text().trim();
-      const timeAttr = $el.find('time').attr('datetime');
+      const timeAttr = $el.find('.tgme_widget_message_date time').attr('datetime');
 
       if (!text || !postId) return;
 
