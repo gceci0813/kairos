@@ -26,16 +26,19 @@ interface NavItem {
   children?: NavItem[];
 }
 
+// Every entry points to a page that exists and works. (The previous list
+// linked to analytics/network/activity/location-test pages that were never
+// created — all 404. Repointed to the real features.)
 const baseNavItems: NavItem[] = [
   { label: 'Dashboard', href: '/dashboard', Icon: IconHome, sub: 'Main dashboard' },
-  { label: 'Analytics', href: '/dashboard/analytics', Icon: IconChartBar, sub: 'Data analytics & metrics' },
-  { label: 'Map', href: '/dashboard/map', Icon: IconMap, sub: 'Interactive map view' },
-  { label: 'Network', href: '/dashboard/network', Icon: IconUsers, sub: 'Network analysis' },
-  { label: 'Activity', href: '/dashboard/activity', Icon: IconActivity, sub: 'Activity monitoring' },
-  { label: 'Location Intelligence', href: '/dashboard/location-test', Icon: IconLocation, sub: 'Geolocation analysis' },
-  { label: 'Social Intel', href: '/dashboard/social-intel', Icon: IconSignalH, sub: 'Social Media Intelligence & Sentiment' },
-  { label: 'ORACLE', href: '/dashboard/oracle', Icon: IconBrain, sub: 'Predictive analysis' },
-  { label: 'SIGMA', href: '/dashboard/sigma', Icon: IconEye, sub: 'Surveillance & monitoring' },
+  { label: 'Political', href: '/dashboard/political', Icon: IconChartBar, sub: 'Sentiment & forecasting' },
+  { label: 'ATLAS', href: '/dashboard/atlas', Icon: IconMap, sub: 'Geographic analysis' },
+  { label: 'Intel Center', href: '/dashboard/intel', Icon: IconUsers, sub: 'Briefings, network & corroboration' },
+  { label: 'ORACLE', href: '/dashboard/oracle', Icon: IconBrain, sub: 'Forecasting & risk' },
+  { label: 'SIGMA', href: '/dashboard/sigma', Icon: IconEye, sub: 'Signal search & ingestion' },
+  { label: 'Social Intel', href: '/dashboard/social-intel', Icon: IconSignalH, sub: 'Social media intelligence' },
+  { label: 'Live Feeds', href: '/dashboard/live', Icon: IconActivity, sub: 'Real-time activity' },
+  { label: 'Signals Map', href: '/dashboard/map', Icon: IconLocation, sub: 'Early-warning map' },
   { label: 'Settings', href: '/dashboard/settings', Icon: IconSettings, sub: 'System settings' }
 ];
 
