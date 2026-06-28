@@ -37,6 +37,7 @@ const baseNavItems: NavItem[] = [
   { label: 'ORACLE', href: '/dashboard/oracle', Icon: IconBrain, sub: 'Forecasting & risk' },
   { label: 'SIGMA', href: '/dashboard/sigma', Icon: IconEye, sub: 'Signal search & ingestion' },
   { label: 'Social Intel', href: '/dashboard/social-intel', Icon: IconSignalH, sub: 'Social media intelligence' },
+  { label: 'Location Intelligence', href: '/dashboard/location-test', Icon: IconLocation, sub: 'Geolocation analysis' },
   { label: 'Live Feeds', href: '/dashboard/live', Icon: IconActivity, sub: 'Real-time activity' },
   { label: 'Signals Map', href: '/dashboard/map', Icon: IconLocation, sub: 'Early-warning map' },
   { label: 'Settings', href: '/dashboard/settings', Icon: IconSettings, sub: 'System settings' }
