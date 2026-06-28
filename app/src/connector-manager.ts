@@ -51,8 +51,13 @@ export class ConnectorManager {
       }
     }
 
-    // Bluesky needs no credentials — public AppView API. Always available.
-    this.connectors.set('bluesky', new BlueskyConnector());
+    // Bluesky: free, but post search needs an authenticated session.
+    if (process.env.BLUESKY_IDENTIFIER && process.env.BLUESKY_APP_PASSWORD) {
+      this.connectors.set('bluesky', new BlueskyConnector(
+        process.env.BLUESKY_IDENTIFIER,
+        process.env.BLUESKY_APP_PASSWORD
+      ));
+    }
   }
 
   private getCached(key: string): StandardizedData[] | undefined {
