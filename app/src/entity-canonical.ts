@@ -1,13 +1,22 @@
+import { Redis } from '@upstash/redis';
 import { anthropic } from '@/lib/anthropic';
 import { getSupabaseAdmin } from './supabase-admin';
 
-// LLM-derived canonical entity map. Loaded once and cached in module memory;
-// canonicalizeEntity() consults it before its static alias/title-case logic,
-// so cross-language and mixed-script forms resolve correctly everywhere.
+// LLM-derived canonical entity map, stored in Redis (no migration needed) and
+// cached in module memory. canonicalizeEntity() consults it before its static
+// rules, so cross-language / mixed-script forms resolve correctly everywhere.
+
+const REDIS_KEY = 'entity:canonical';
 
 let CANONICAL_MAP: Map<string, string> | null = null;
 let loadedAt = 0;
 const TTL_MS = 10 * 60 * 1000;
+
+function getRedis(): Redis | null {
+  const url = (process.env.UPSTASH_REDIS_REST_URL ?? '').trim();
+  const token = (process.env.UPSTASH_REDIS_REST_TOKEN ?? '').trim();
+  return url && token ? new Redis({ url, token }) : null;
+}
 
 function norm(text: string): string {
   return text.normalize('NFKC').toLowerCase().trim().replace(/\s+/g, ' ');
@@ -15,22 +24,20 @@ function norm(text: string): string {
 
 export async function ensureCanonicalMap(): Promise<void> {
   if (CANONICAL_MAP && Date.now() - loadedAt < TTL_MS) return;
-  const supabase = getSupabaseAdmin();
-  if (!supabase) {
+  const redis = getRedis();
+  if (!redis) {
     CANONICAL_MAP = CANONICAL_MAP ?? new Map();
     return;
   }
-  const { data, error } = await supabase.from('sigma_entity_canonical').select('raw_lower, canonical').limit(20000);
-  if (error) {
-    // Table may not exist yet — degrade gracefully to static rules.
+  try {
+    const all = (await redis.hgetall<Record<string, string>>(REDIS_KEY)) ?? {};
+    CANONICAL_MAP = new Map(Object.entries(all));
+    loadedAt = Date.now();
+  } catch {
     CANONICAL_MAP = CANONICAL_MAP ?? new Map();
-    return;
   }
-  CANONICAL_MAP = new Map((data ?? []).map((r: any) => [r.raw_lower, r.canonical]));
-  loadedAt = Date.now();
 }
 
-// Synchronous lookup used inside canonicalizeEntity (map already loaded).
 export function canonicalLookup(text: string): string | undefined {
   if (!CANONICAL_MAP) return undefined;
   return CANONICAL_MAP.get(norm(text));
@@ -84,30 +91,30 @@ async function mapBatch(texts: string[]): Promise<Mapping[]> {
   return [];
 }
 
-export async function buildCanonicalMappings(maxDistinct = 400): Promise<{ scanned: number; mapped: number; errors: string[] }> {
+export async function buildCanonicalMappings(maxDistinct = 400): Promise<{ scanned: number; mapped: number; total: number; errors: string[] }> {
   const supabase = getSupabaseAdmin();
   if (!supabase) throw new Error('Supabase admin client not configured');
+  const redis = getRedis();
+  if (!redis) throw new Error('Redis not configured (UPSTASH_REDIS_REST_URL/TOKEN)');
 
-  // Gather distinct entity surface forms from findings.
+  // Distinct entity surface forms from findings.
   const { data, error } = await supabase.from('sigma_findings').select('entities').limit(8000);
   if (error) throw new Error(error.message);
 
-  const counts = new Map<string, { text: string; type: string; n: number }>();
+  const counts = new Map<string, { text: string; n: number }>();
   for (const f of data ?? []) {
     for (const e of ((f as any).entities ?? [])) {
       const key = norm(e.text);
       if (!key) continue;
-      const cur = counts.get(key) ?? { text: e.text, type: e.type, n: 0 };
+      const cur = counts.get(key) ?? { text: e.text, n: 0 };
       cur.n++;
       counts.set(key, cur);
     }
   }
 
-  // Which are already mapped?
-  const { data: existing } = await supabase.from('sigma_entity_canonical').select('raw_lower').limit(20000);
-  const done = new Set((existing ?? []).map((r: any) => r.raw_lower));
+  const existing = (await redis.hgetall<Record<string, string>>(REDIS_KEY)) ?? {};
+  const done = new Set(Object.keys(existing));
 
-  // Prioritize highest-frequency unmapped entities.
   const todo = Array.from(counts.entries())
     .filter(([k]) => !done.has(k))
     .sort((a, b) => b[1].n - a[1].n)
@@ -119,26 +126,26 @@ export async function buildCanonicalMappings(maxDistinct = 400): Promise<{ scann
   const startedAt = Date.now();
 
   for (let i = 0; i < todo.length; i += BATCH) {
-    if (Date.now() - startedAt > 50_000) break; // stay under function limit
+    if (Date.now() - startedAt > 50_000) break;
     const slice = todo.slice(i, i + BATCH);
     try {
       const mappings = await mapBatch(slice.map(([, v]) => v.text));
-      const rows = mappings
-        .filter((m) => m.raw && m.canonical)
-        .map((m) => ({ raw_lower: norm(m.raw), canonical: m.canonical, entity_type: m.type }));
-      if (rows.length) {
-        const { error: upErr } = await supabase.from('sigma_entity_canonical').upsert(rows, { onConflict: 'raw_lower', ignoreDuplicates: true });
-        if (upErr) errors.push(upErr.message);
-        else mapped += rows.length;
+      const hash: Record<string, string> = {};
+      for (const m of mappings) {
+        if (m.raw && m.canonical) hash[norm(m.raw)] = m.canonical;
+      }
+      if (Object.keys(hash).length) {
+        await redis.hset(REDIS_KEY, hash);
+        mapped += Object.keys(hash).length;
       }
     } catch (err: any) {
       errors.push(err.message ?? 'batch failed');
     }
   }
 
-  // Refresh the in-memory cache.
   loadedAt = 0;
   await ensureCanonicalMap();
+  const total = (await redis.hlen(REDIS_KEY)) as number;
 
-  return { scanned: counts.size, mapped, errors };
+  return { scanned: counts.size, mapped, total, errors };
 }
