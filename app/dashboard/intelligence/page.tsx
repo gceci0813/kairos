@@ -180,7 +180,13 @@ export default function IntelligencePage() {
             Add Sample Location Data
           </button>
 
-          {locationData && (
+          {locationData && !locationData.patterns && (
+            <div className="p-4 bg-gray-100 rounded text-sm text-gray-600">
+              Need at least 2 points to detect movement patterns — click "Add Sample Location Data" again.
+            </div>
+          )}
+
+          {locationData && locationData.patterns && (
             <div className="p-4 bg-gray-100 rounded">
               <h3 className="font-semibold mb-2">Movement Patterns:</h3>
               <p>Device ID: {locationData.deviceId}</p>
