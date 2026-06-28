@@ -55,11 +55,9 @@ export class RedisStreamsQueue<T> implements MessageQueue<T> {
 
   async consume(topic: string): Promise<T[]> {
     const cursor = (await this.redis.get<string>(this.cursorKey(topic))) ?? '0';
-    // XRANGE exclusive of the cursor by appending '(' is not supported in all
-    // clients; we read from cursor inclusive then drop the already-seen id.
     const entries = (await this.redis.xrange(this.streamKey(topic), cursor, '+')) as Record<
       string,
-      { data: string }
+      { data: unknown }
     >;
 
     const ids = Object.keys(entries);
@@ -67,10 +65,13 @@ export class RedisStreamsQueue<T> implements MessageQueue<T> {
     let lastId = cursor;
     for (const id of ids) {
       if (id === cursor) continue; // skip the inclusive boundary already consumed
+      const raw = entries[id]?.data;
+      // @upstash/redis may auto-deserialize JSON, so `data` can arrive as a
+      // string OR an already-parsed object. Handle both.
       try {
-        results.push(JSON.parse(entries[id].data) as T);
+        results.push((typeof raw === 'string' ? JSON.parse(raw) : raw) as T);
       } catch {
-        /* skip malformed entry */
+        if (raw !== undefined) results.push(raw as T);
       }
       lastId = id;
     }
