@@ -37,18 +37,31 @@ function buildFindingSummary(item: StandardizedData, nlp: Awaited<ReturnType<typ
   return `${item.source} content from ${item.author}`;
 }
 
+// Bounded-concurrency NLP so a single 60s function processes more messages.
+// Sequential per-item LLM calls were the throughput bottleneck on Hobby.
+const NLP_CONCURRENCY = 6;
+
 export async function analyzeBatch(batch: StandardizedData[]): Promise<SigmaFinding[]> {
-  const findings: SigmaFinding[] = [];
+  // Run the per-item NLP (the slow LLM step) with bounded concurrency.
+  const nlpResults: Awaited<ReturnType<typeof analyzeText>>[] = new Array(batch.length);
+  let cursor = 0;
+  async function worker() {
+    while (cursor < batch.length) {
+      const i = cursor++;
+      nlpResults[i] = await analyzeText(batch[i].content);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(NLP_CONCURRENCY, batch.length) }, worker));
 
-  for (const item of batch) {
-    const nlp = await analyzeText(item.content);
+  // Coordination detection is synchronous over the whole batch.
+  return batch.map((item, i) => {
+    const nlp = nlpResults[i];
     const coordination = detectCoordination(item, batch);
-
     const confidence = coordination.isFlagged
       ? Math.max(0.5, coordination.score)
       : 0.5 + Math.abs(nlp.sentimentScore) * 0.2;
 
-    findings.push({
+    return {
       finding: buildFindingSummary(item, nlp, coordination),
       confidence_score: Math.min(1, confidence),
       reasoning_chain: buildReasoningChain(item, nlp, coordination),
@@ -64,8 +77,6 @@ export async function analyzeBatch(batch: StandardizedData[]): Promise<SigmaFind
       nlp,
       coordination,
       raw: item,
-    });
-  }
-
-  return findings;
+    };
+  });
 }
