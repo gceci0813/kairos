@@ -29,7 +29,13 @@ export class GDELTConnector extends BaseDataConnector {
       if (!response.ok) {
         throw new Error(`GDELT API error: ${response.status} ${response.statusText}`);
       }
-      
+
+      const contentType = response.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        const text = await response.text();
+        throw new Error(`GDELT API returned non-JSON response: ${text.slice(0, 200)}`);
+      }
+
       const data = await response.json();
       return this.transformData(data);
     } catch (error) {

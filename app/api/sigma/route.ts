@@ -23,7 +23,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ results });
   } catch (error) {
     console.error('Error in sigma API:', error);
-    return NextResponse.json({ error: 'Failed to fetch data' }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Failed to fetch data';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
@@ -47,6 +48,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ results });
   } catch (error) {
     console.error('Error in sigma API:', error);
-    return NextResponse.json({ error: 'Failed to fetch data' }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Failed to fetch data';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
