@@ -106,6 +106,13 @@ function IconChevron({ right }: { right: boolean }) {
     </svg>
   );
 }
+function IconLab() {
+  return (
+    <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+      <path fillRule="evenodd" d="M7 2a1 1 0 00-1 1v5.586l-3.707 3.707A2 2 0 003 15.414V16a2 2 0 002 2h10a2 2 0 002-2v-.586a2 2 0 00-.586-1.414L14 8.586V3a1 1 0 00-1-1H7zm1 2h4v5a1 1 0 00.293.707L15.586 14H4.414l3.293-3.293A1 1 0 008 10V4z" clipRule="evenodd" />
+    </svg>
+  );
+}
 function IconSigma() {
   return (
     <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
@@ -132,6 +139,7 @@ const baseNavItems = [
   { label: 'DOCUMENTS', href: '/dashboard/documents',  Icon: IconFileSearch,  sub: 'Intelligence Extraction'    },
   { label: 'Live Feeds',href: '/dashboard/live',       Icon: IconSignal,    sub: 'Real-Time Intel Hub'        },
   { label: 'SIGMA',     href: '/dashboard/sigma',      Icon: IconSigma,     sub: 'GDELT & Reddit Search'      },
+  { label: 'Intel Lab', href: '/dashboard/intelligence', Icon: IconLab,     sub: 'Vehicle ID & Image Analysis (Demo)' },
   { label: 'Signals',   href: '/dashboard/map',      Icon: IconGlobe,  sub: 'Early Warning System' },
   { label: 'Reports',   href: '/dashboard/reports',  Icon: IconDoc                                },
   { label: 'Profile',   href: '/dashboard/profile',  Icon: IconCard, sub: 'My Account & Activity' },
