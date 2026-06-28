@@ -1,7 +1,7 @@
 {
   "crons": [
     {
-      "path": "/api/sigma/ingest",
+      "path": "/api/sigma/ingest-daily",
       "schedule": "0 6 * * *"
     },
     {
