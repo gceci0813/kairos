@@ -28,12 +28,12 @@ interface NavItem {
 
 const baseNavItems: NavItem[] = [
   { label: 'Dashboard', href: '/dashboard', Icon: IconHome, sub: 'Main dashboard' },
-  { label: 'Analytics', href: '/dashboard/political', Icon: IconChartBar, sub: 'Sentiment & forecasting' },
+  { label: 'Analytics', href: '/dashboard/analytics', Icon: IconChartBar, sub: 'Data analytics & metrics' },
   { label: 'Map', href: '/dashboard/map', Icon: IconMap, sub: 'Interactive map view' },
-  { label: 'Network', href: '/dashboard/intel', Icon: IconUsers, sub: 'Entity network & briefings' },
-  { label: 'Activity', href: '/dashboard/live', Icon: IconActivity, sub: 'Real-time activity' },
-  { label: 'Location Intelligence', href: '/location-test', Icon: IconLocation, sub: 'Geolocation analysis' },
-  { label: 'Social Intel', href: '/dashboard/social-intel', Icon: IconSignalH, sub: 'Social Media Intelligence & Sentiment' },
+  { label: 'Network', href: '/dashboard/network', Icon: IconUsers, sub: 'Network analysis' },
+  { label: 'Activity', href: '/dashboard/activity', Icon: IconActivity, sub: 'Activity monitoring' },
+  { label: 'Location Intelligence', href: '/location-test', Icon: IconLocation, sub: 'Real geolocation analysis' },
+  { label: 'Social Intel', href: '/location-test/social-intel', Icon: IconSignalH, sub: 'Real-time social media intelligence' },
   { label: 'ORACLE', href: '/dashboard/oracle', Icon: IconBrain, sub: 'Predictive analysis' },
   { label: 'SIGMA', href: '/dashboard/sigma', Icon: IconEye, sub: 'Surveillance & monitoring' },
   { label: 'Settings', href: '/dashboard/settings', Icon: IconSettings, sub: 'System settings' }
@@ -49,7 +49,6 @@ export default function DashboardLayout({
   const pathname = usePathname();
 
   useEffect(() => {
-    // Auto-expand parent items if a child is active
     const activeParents = baseNavItems.filter(item => 
       item.children && item.children.some(child => child.href === pathname)
     ).map(item => item.label);
@@ -116,10 +115,8 @@ export default function DashboardLayout({
 
   return (
     <div className="flex h-screen bg-gray-50">
-      {/* Sidebar */}
       <div className={`${sidebarOpen ? 'w-64' : 'w-16'} transition-all duration-300 bg-white shadow-md`}>
         <div className="flex flex-col h-full">
-          {/* Header */}
           <div className="p-4 border-b">
             <div className="flex items-center justify-between">
               <h1 className={`font-bold text-xl ${!sidebarOpen && 'hidden'}`}>Kairos</h1>
@@ -135,7 +132,6 @@ export default function DashboardLayout({
             </div>
           </div>
 
-          {/* Navigation */}
           <nav className="flex-1 p-4 overflow-y-auto">
             <ul className="space-y-2">
               {baseNavItems.map((item, index) => (
@@ -146,7 +142,6 @@ export default function DashboardLayout({
             </ul>
           </nav>
 
-          {/* Footer */}
           <div className="p-4 border-t">
             <div className="text-xs text-gray-500 text-center">
               {sidebarOpen ? 'Kairos Intelligence Platform' : 'KAIROS'}
@@ -155,7 +150,6 @@ export default function DashboardLayout({
         </div>
       </div>
 
-      {/* Main Content */}
       <div className="flex-1 overflow-hidden">
         <div className="h-full overflow-y-auto">
           {children}
