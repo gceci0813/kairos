@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { runIngest } from '../../../src/sigma-ingest';
 import { ingestQuery } from '../../../src/sigma-ingest-query';
 import { getTrackedQueries } from '../../../src/tracked-queries';
+import { getSupabaseAdmin } from '../../../src/supabase-admin';
+import { buildGeocodeCache } from '../../../src/geocoder';
 
 export const maxDuration = 60;
 
@@ -53,12 +55,31 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // 3) Top up the geocode cache with any remaining time (place names from
+  //    recent findings). Hobby has only 2 cron slots, so this rides along here.
+  let geocode: any = null;
+  if (Date.now() - start < TOTAL_BUDGET_MS - 4000) {
+    try {
+      const sb = getSupabaseAdmin();
+      if (sb) {
+        const { data } = await sb.from('sigma_findings').select('entities').order('analyzed_at', { ascending: false }).limit(3000);
+        const names: string[] = [];
+        for (const f of data ?? []) for (const e of ((f as any).entities ?? [])) if (e.type === 'location' && e.text) names.push(e.text);
+        const remaining = Math.max(3000, TOTAL_BUDGET_MS - (Date.now() - start));
+        geocode = await buildGeocodeCache(names, remaining);
+      }
+    } catch (err: any) {
+      geocode = { error: err.message };
+    }
+  }
+
   return NextResponse.json({
     channels,
     trackedTotal: all.length,
     queriesRun: queryResults.length,
     queriesQueued,
     queryResults,
+    geocode,
     note: 'Analysis runs on the process cron. On Hobby (~40 analyzed/day) heavy ingestion outpaces analysis — see provenance panel for actual coverage.',
   });
 }

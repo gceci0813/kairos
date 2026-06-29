@@ -11,12 +11,15 @@ import { GeoPoint, lookupPlace } from './atlas-gazetteer';
 // cached in Redis (when configured) to stay well within it. If a
 // GEOCODER_USER_AGENT / contact is set, it's used per Nominatim policy.
 
+export type GeocodeProvider = 'gazetteer' | 'mapbox' | 'google' | 'nominatim' | 'cache';
+
 export interface GeocodeResult {
   lat: number;
   lon: number;
   displayName: string;
   kind: GeoPoint['kind'];
-  source: 'gazetteer' | 'nominatim' | 'cache';
+  source: GeocodeProvider;
+  confidence: number; // 0-1
 }
 
 function getRedis(): Redis | null {
@@ -40,59 +43,101 @@ function cacheKey(name: string) {
   return CACHE_PREFIX + name.toLowerCase().trim();
 }
 
+// --- Providers (each returns null on miss/error) -------------------------
+
+async function viaMapbox(q: string): Promise<GeocodeResult | null> {
+  const token = (process.env.MAPBOX_TOKEN ?? '').trim();
+  if (!token) return null;
+  const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(q)}.json?` +
+    new URLSearchParams({ access_token: token, limit: '1', language: 'en' });
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`mapbox ${res.status}`);
+  const data = await res.json();
+  const f = data?.features?.[0];
+  if (!f) return null;
+  const [lon, lat] = f.center;
+  const place = (f.place_type ?? []).includes('country') ? 'country' : 'city';
+  return { lat, lon, displayName: f.text ?? q, kind: place, source: 'mapbox', confidence: typeof f.relevance === 'number' ? f.relevance : 0.8 };
+}
+
+async function viaGoogle(q: string): Promise<GeocodeResult | null> {
+  const key = (process.env.GOOGLE_GEOCODING_KEY ?? '').trim();
+  if (!key) return null;
+  const url = `https://maps.googleapis.com/maps/api/geocode/json?` +
+    new URLSearchParams({ address: q, key });
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`google ${res.status}`);
+  const data = await res.json();
+  if (data.status === 'ZERO_RESULTS') return null;
+  if (data.status !== 'OK') throw new Error(`google ${data.status}`);
+  const r = data.results?.[0];
+  if (!r) return null;
+  const loc = r.geometry.location;
+  const isCountry = (r.types ?? []).includes('country');
+  // Google location_type → confidence proxy.
+  const lt = r.geometry.location_type;
+  const conf = lt === 'ROOFTOP' ? 0.95 : lt === 'RANGE_INTERPOLATED' ? 0.85 : lt === 'GEOMETRIC_CENTER' ? 0.75 : 0.65;
+  return { lat: loc.lat, lon: loc.lng, displayName: r.formatted_address?.split(',')[0] ?? q, kind: isCountry ? 'country' : 'city', source: 'google', confidence: conf };
+}
+
+async function viaNominatim(q: string): Promise<GeocodeResult | null> {
+  await rateLimit(); // only Nominatim needs the 1/sec courtesy pacing
+  const ua = (process.env.GEOCODER_USER_AGENT ?? 'Kairos-SIGMA/1.0 (osint research)').trim();
+  const url = `https://nominatim.openstreetmap.org/search?` +
+    new URLSearchParams({ q, format: 'json', limit: '1', addressdetails: '0' });
+  const res = await fetch(url, { headers: { 'User-Agent': ua, 'Accept-Language': 'en' } });
+  if (!res.ok) throw new Error(`nominatim ${res.status}`);
+  const data = await res.json();
+  const hit = Array.isArray(data) ? data[0] : null;
+  if (!hit) return null;
+  const lat = parseFloat(hit.lat), lon = parseFloat(hit.lon);
+  if (isNaN(lat) || isNaN(lon)) return null;
+  const imp = typeof hit.importance === 'number' ? hit.importance : 0.5;
+  return {
+    lat, lon,
+    displayName: hit.display_name?.split(',')[0] ?? q,
+    kind: /city|town|village|hamlet|suburb/i.test(hit.type ?? '') ? 'city' : 'country',
+    source: 'nominatim',
+    confidence: Math.max(0.4, Math.min(0.95, imp)),
+  };
+}
+
+// Fallback chain: gazetteer → cache → Mapbox → Google → Nominatim. Higher-
+// accuracy paid providers are tried first when configured.
 export async function geocodePlace(name: string): Promise<GeocodeResult | null> {
   const clean = name.trim();
   if (!clean || clean.length < 2) return null;
 
-  // 1) Static gazetteer first (instant, curated centroids).
   const gaz = lookupPlace(clean);
   if (gaz) {
-    return { lat: gaz.lat, lon: gaz.lon, displayName: gaz.canonical, kind: gaz.kind, source: 'gazetteer' };
+    return { lat: gaz.lat, lon: gaz.lon, displayName: gaz.canonical, kind: gaz.kind, source: 'gazetteer', confidence: 1 };
   }
 
   const redis = getRedis();
   const key = cacheKey(clean);
-
-  // 2) Cache.
   if (redis) {
     const cached = await redis.get<GeocodeResult | string>(key);
     if (cached === NEGATIVE) return null;
-    if (cached && typeof cached === 'object') return { ...cached, source: 'cache' };
+    if (cached && typeof cached === 'object') return { ...(cached as GeocodeResult), source: 'cache' };
   }
 
-  // 3) Live geocode via Nominatim.
-  try {
-    await rateLimit();
-    const ua = (process.env.GEOCODER_USER_AGENT ?? 'Kairos-SIGMA/1.0 (osint research)').trim();
-    const url = `https://nominatim.openstreetmap.org/search?` +
-      new URLSearchParams({ q: clean, format: 'json', limit: '1', addressdetails: '0' });
-    const res = await fetch(url, { headers: { 'User-Agent': ua, 'Accept-Language': 'en' } });
-
-    if (!res.ok) {
-      // Don't cache transient failures.
-      console.error(`Geocoder error for "${clean}": ${res.status}`);
-      return null;
+  const providers = [viaMapbox, viaGoogle, viaNominatim];
+  for (const provider of providers) {
+    try {
+      const result = await provider(clean);
+      if (result) {
+        if (redis) await redis.set(key, result, { ex: CACHE_TTL_S });
+        return result;
+      }
+    } catch (error) {
+      // Provider error/outage — try the next in the chain.
+      console.error(`Geocoder provider failed for "${clean}":`, error);
     }
-    const data = await res.json();
-    if (!Array.isArray(data) || data.length === 0) {
-      if (redis) await redis.set(key, NEGATIVE, { ex: CACHE_TTL_S });
-      return null;
-    }
-    const hit = data[0];
-    const result: GeocodeResult = {
-      lat: parseFloat(hit.lat),
-      lon: parseFloat(hit.lon),
-      displayName: hit.display_name?.split(',')[0] ?? clean,
-      kind: /city|town|village|hamlet|suburb/i.test(hit.type ?? '') ? 'city' : 'country',
-      source: 'nominatim',
-    };
-    if (isNaN(result.lat) || isNaN(result.lon)) return null;
-    if (redis) await redis.set(key, result, { ex: CACHE_TTL_S });
-    return result;
-  } catch (error) {
-    console.error(`Geocoder failed for "${clean}":`, error);
-    return null;
   }
+
+  // All providers returned no match — cache negative to avoid re-querying.
+  if (redis) await redis.set(key, NEGATIVE, { ex: CACHE_TTL_S });
+  return null;
 }
 
 // Cache-only batch resolve (gazetteer + Redis, NO live calls) — fast enough
@@ -106,7 +151,7 @@ export async function resolvePlacesCached(names: string[]): Promise<Map<string, 
   for (const name of distinct) {
     const gaz = lookupPlace(name);
     if (gaz) {
-      out.set(name, { lat: gaz.lat, lon: gaz.lon, displayName: gaz.canonical, kind: gaz.kind, source: 'gazetteer' });
+      out.set(name, { lat: gaz.lat, lon: gaz.lon, displayName: gaz.canonical, kind: gaz.kind, source: 'gazetteer', confidence: 1 });
     } else {
       needCache.push(name);
     }
