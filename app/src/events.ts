@@ -25,6 +25,7 @@ interface FindingRow {
   entities: Array<{ text: string; type: string }> | null;
   topics: string[] | null;
   sentiment_score: number | null;
+  analyzed_at: string;
   sigma_messages: { posted_at: string | null; content: string | null } | null;
 }
 
@@ -35,7 +36,7 @@ export async function loadEvents(sinceDays: number, limit = 8000): Promise<GeoEv
 
   const { data, error } = await supabase
     .from('sigma_findings')
-    .select('msg_key, channel, entities, topics, sentiment_score, sigma_messages!inner(posted_at, content)')
+    .select('msg_key, channel, entities, topics, sentiment_score, analyzed_at, sigma_messages!inner(posted_at, content)')
     .order('analyzed_at', { ascending: false })
     .limit(limit);
   if (error) throw new Error(error.message);
@@ -55,9 +56,11 @@ export async function loadEvents(sinceDays: number, limit = 8000): Promise<GeoEv
 
   const events: GeoEvent[] = [];
   for (const r of rows) {
-    const postedAt = r.sigma_messages?.posted_at;
-    if (!postedAt) continue;
-    const ts = new Date(postedAt).getTime();
+    // Event time = publication date when available, else when it was analyzed
+    // (many backfilled findings have null posted_at).
+    const eventDate = r.sigma_messages?.posted_at ?? r.analyzed_at;
+    if (!eventDate) continue;
+    const ts = new Date(eventDate).getTime();
     if (isNaN(ts) || ts < sinceMs) continue;
 
     // One event per (finding, distinct place).
