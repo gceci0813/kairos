@@ -66,6 +66,25 @@ export default function IntelPage() {
   const [lookupQ, setLookupQ] = useState('');
   const [lookup, setLookup] = useState<any>(null);
   const [lookupLoading, setLookupLoading] = useState(false);
+  const [watch, setWatch] = useState<any[]>([]);
+  const [watchTerm, setWatchTerm] = useState('');
+
+  const loadWatch = useCallback(async () => {
+    try {
+      const r = await fetch('/api/intel/watchlist/status?days=365').then((x) => x.json());
+      setWatch(r.items || []);
+    } catch { /* ignore */ }
+  }, []);
+
+  const addWatchTerm = async () => {
+    if (!watchTerm.trim()) return;
+    await fetch('/api/intel/watchlist', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ term: watchTerm.trim(), kind: 'query' }) });
+    setWatchTerm(''); loadWatch();
+  };
+  const removeWatchTerm = async (term: string) => {
+    await fetch(`/api/intel/watchlist?term=${encodeURIComponent(term)}`, { method: 'DELETE' });
+    loadWatch();
+  };
 
   const runLookup = async () => {
     if (!lookupQ.trim()) return;
@@ -98,7 +117,7 @@ export default function IntelPage() {
     } catch (e: any) { setError(e.message); } finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { loadDash(); }, [loadDash]);
+  useEffect(() => { loadDash(); loadWatch(); }, [loadDash, loadWatch]);
 
   const runCorrob = async () => {
     if (!query.trim()) return;
@@ -176,6 +195,33 @@ export default function IntelPage() {
                 {lookup.corroboration.strongestEvents?.length === 0 && <p className="text-xs text-gray-400">—</p>}
               </div>
             </div>
+          </div>
+        )}
+      </div>
+
+      {/* Watchlist monitor */}
+      <div className="bg-white border rounded-lg p-4 mb-6">
+        <h2 className="font-semibold mb-2">Watchlist</h2>
+        <div className="flex gap-2 mb-3">
+          <input value={watchTerm} onChange={(e) => setWatchTerm(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addWatchTerm()}
+            placeholder="Add a region/narrative to monitor…" className="flex-1 p-2 border rounded text-sm" />
+          <button onClick={addWatchTerm} className="px-3 py-2 bg-slate-700 text-white rounded hover:bg-slate-800 text-sm">+ Watch</button>
+        </div>
+        {watch.length === 0 ? (
+          <p className="text-xs text-gray-400">No watched terms yet. Add regions or narratives to track their volume, sentiment and deviations.</p>
+        ) : (
+          <div className="space-y-1">
+            {watch.map((w: any) => (
+              <div key={w.term} className={`flex items-center gap-3 text-xs border rounded px-2 py-1.5 ${w.flagged ? 'bg-amber-50 border-amber-200' : ''}`}>
+                {w.flagged && <span className="text-amber-600">⚑</span>}
+                <span className="font-medium w-40 truncate">{w.term}</span>
+                <span>vol {w.mentions}</span>
+                <span>sent {w.sentiment}</span>
+                <span>mom {w.momentum}</span>
+                {w.deviationZ != null && <span>z={w.deviationZ}</span>}
+                <button onClick={() => removeWatchTerm(w.term)} className="ml-auto text-gray-400 hover:text-red-600">✕</button>
+              </div>
+            ))}
           </div>
         )}
       </div>
