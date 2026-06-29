@@ -49,7 +49,10 @@ const baseNavItems: NavItem[] = [
   { label: 'Social Intel (Alt)', href: '/location-test/social-intel', Icon: IconSignalH, sub: 'Alternative social analysis' },
   { label: 'Narrative Intel', href: '/dashboard/narrative', Icon: IconBrain, sub: 'Narrative analysis & tracking' },
   { label: 'Data Integration', href: '/dashboard/integration', Icon: IconChartBar, sub: 'Palantir-style data fusion' },
-  { label: 'Pattern Recognition', href: '/dashboard/recognition', Icon: IconEye, sub: 'Clearview-style recognition' }
+  { label: 'Pattern Recognition', href: '/dashboard/recognition', Icon: IconEye, sub: 'Clearview-style recognition' },
+  { label: 'Real-Time Intel', href: '/dashboard/realtime', Icon: IconActivity, sub: 'Live threat monitoring' },
+  { label: 'Advanced Analytics', href: '/dashboard/analytics', Icon: IconChartBar, sub: 'Deep data analysis' },
+  { label: 'Predictive Intel', href: '/dashboard/predictive', Icon: IconBrain, sub: 'AI-powered predictions' }
 ];
 
 export default function DashboardLayout({
