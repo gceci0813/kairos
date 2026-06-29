@@ -61,22 +61,24 @@ export default function IntelPage() {
   const [sentShift, setSentShift] = useState<any>(null);
   const [diffTopic, setDiffTopic] = useState('');
   const [diffusion, setDiffusion] = useState<any>(null);
+  const [coMove, setCoMove] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const loadDash = useCallback(async () => {
     setLoading(true); setError('');
     try {
-      const [b, e, al, g, bl, ss] = await Promise.all([
+      const [b, e, al, g, bl, ss, co] = await Promise.all([
         fetch('/api/intel/briefing?days=30').then((r) => r.json()),
         fetch('/api/intel/emerging?days=30').then((r) => r.json()),
         fetch('/api/intel/alerts?days=30').then((r) => r.json()),
         fetch('/api/intel/graph?days=30').then((r) => r.json()),
         fetch('/api/intel/baseline?window=730&recent=14').then((r) => r.json()),
         fetch('/api/intel/sentiment-shift?window=730&recent=30').then((r) => r.json()),
+        fetch('/api/intel/narrative-correlation?days=1825').then((r) => r.json()),
       ]);
       if (b.error) throw new Error(b.error);
-      setBriefing(b); setEmerging(e); setAlerts(al); setGraph(g); setBaseline(bl); setSentShift(ss);
+      setBriefing(b); setEmerging(e); setAlerts(al); setGraph(g); setBaseline(bl); setSentShift(ss); setCoMove(co);
     } catch (e: any) { setError(e.message); } finally { setLoading(false); }
   }, []);
 
@@ -167,6 +169,35 @@ export default function IntelPage() {
           </div>
         </div>
       </div>
+
+      {/* Cross-narrative co-movement */}
+      {coMove && (coMove.positive?.length > 0 || coMove.negative?.length > 0) && (
+        <div className="grid md:grid-cols-2 gap-6 mb-6">
+          <div className="bg-white border rounded-lg p-4">
+            <h2 className="font-semibold mb-2">Narratives that move together</h2>
+            <div className="space-y-1 max-h-56 overflow-auto">
+              {(coMove.positive || []).slice(0, 12).map((p: any, i: number) => (
+                <div key={i} className="flex items-center gap-2 text-xs border rounded px-2 py-1">
+                  <span className="flex-1 truncate">{p.a} ↔ {p.b}</span>
+                  <span className="font-bold text-green-700">r={p.correlation}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="bg-white border rounded-lg p-4">
+            <h2 className="font-semibold mb-2">Inversely-moving narratives</h2>
+            <div className="space-y-1 max-h-56 overflow-auto">
+              {(coMove.negative || []).slice(0, 12).map((p: any, i: number) => (
+                <div key={i} className="flex items-center gap-2 text-xs border rounded px-2 py-1">
+                  <span className="flex-1 truncate">{p.a} ↮ {p.b}</span>
+                  <span className="font-bold text-red-700">r={p.correlation}</span>
+                </div>
+              ))}
+              {coMove.negative?.length === 0 && <p className="text-xs text-gray-400">None detected.</p>}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Narrative diffusion */}
       <div className="bg-white border rounded-lg p-4 mb-6">
