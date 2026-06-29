@@ -63,6 +63,20 @@ export default function IntelPage() {
   const [diffusion, setDiffusion] = useState<any>(null);
   const [coMove, setCoMove] = useState<any>(null);
   const [digest, setDigest] = useState<any>(null);
+  const [lookupQ, setLookupQ] = useState('');
+  const [lookup, setLookup] = useState<any>(null);
+  const [lookupLoading, setLookupLoading] = useState(false);
+
+  const runLookup = async () => {
+    if (!lookupQ.trim()) return;
+    setLookupLoading(true); setError('');
+    try {
+      const r = await fetch(`/api/intel/lookup?q=${encodeURIComponent(lookupQ.trim())}`);
+      const d = await r.json();
+      if (d.error) throw new Error(d.error);
+      setLookup(d);
+    } catch (e: any) { setError(e.message); } finally { setLookupLoading(false); }
+  };
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -117,6 +131,54 @@ export default function IntelPage() {
       <p className="text-sm text-gray-500 mb-6">Auto-briefing, emerging narratives, and cross-source corroboration. Aggregate regions/narratives.</p>
 
       {error && <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">{error}</div>}
+
+      {/* Unified lookup — one query, every engine */}
+      <div className="bg-white border-2 border-blue-200 rounded-lg p-4 mb-6">
+        <div className="flex gap-2">
+          <input value={lookupQ} onChange={(e) => setLookupQ(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && runLookup()}
+            placeholder="Look up anything — a place, narrative, or entity (e.g. Russia, Sanctions, NATO)…"
+            className="flex-1 p-2.5 border rounded text-sm" />
+          <button onClick={runLookup} disabled={lookupLoading} className="px-5 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 font-medium">
+            {lookupLoading ? 'Looking…' : 'Look up'}
+          </button>
+        </div>
+        {lookup && (
+          <div className="mt-4 text-sm">
+            <div className="flex flex-wrap gap-x-6 gap-y-1 mb-3 text-xs">
+              <span>Mentions: <b>{lookup.summary.mentions}</b></span>
+              <span>Sentiment: <b>{lookup.summary.overallSentiment}</b> (mom {lookup.summary.sentimentMomentum})</span>
+              <span>Sources: <b>{lookup.summary.distinctSources}</b></span>
+              <span>Reliability: <b>{lookup.summary.reliability}</b></span>
+            </div>
+            <div className="grid md:grid-cols-3 gap-3">
+              <div>
+                <h4 className="text-xs uppercase text-gray-400 mb-1">Top sources</h4>
+                {(lookup.topSources || []).slice(0, 5).map((s: any) => (
+                  <div key={s.source} className="text-xs flex justify-between"><span className="truncate">{s.source}</span><span className="text-gray-400">{s.count}</span></div>
+                ))}
+                {lookup.topSources?.length === 0 && <p className="text-xs text-gray-400">—</p>}
+              </div>
+              <div>
+                <h4 className="text-xs uppercase text-gray-400 mb-1">Diffusion</h4>
+                {lookup.diffusion.origin ? (
+                  <>
+                    <p className="text-xs">Origin: <b>{lookup.diffusion.origin.source}</b></p>
+                    <p className="text-xs text-gray-500">Reach: {lookup.diffusion.reach.distinctSources} src / {lookup.diffusion.reach.distinctRegions} regions</p>
+                    <p className="text-xs text-gray-500 mt-1">{lookup.diffusion.regionsReached.slice(0, 6).join(' → ')}</p>
+                  </>
+                ) : <p className="text-xs text-gray-400">—</p>}
+              </div>
+              <div>
+                <h4 className="text-xs uppercase text-gray-400 mb-1">Corroborated events</h4>
+                {(lookup.corroboration.strongestEvents || []).slice(0, 3).map((e: any, i: number) => (
+                  <div key={i} className="text-xs mb-1"><span className="font-bold text-blue-600">{e.sourceCount}src</span> <span className="text-gray-600">{e.summary.slice(0, 60)}</span></div>
+                ))}
+                {lookup.corroboration.strongestEvents?.length === 0 && <p className="text-xs text-gray-400">—</p>}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
       {digest && (
         <div className="bg-slate-900 text-slate-100 rounded-lg p-4 mb-6">
