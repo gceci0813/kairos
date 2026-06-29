@@ -80,7 +80,7 @@ export default function DashboardLayout({
         const response = await fetch('/api/auth/verify', {
           method: 'POST'
         });
-        
+
         const data = await response.json();
         
         if (data.success) {
@@ -117,7 +117,7 @@ export default function DashboardLayout({
       await fetch('/api/auth/logout', {
         method: 'POST'
       });
-      
+
       router.push('/login');
     } catch (error) {
       console.error('Logout error:', error);
