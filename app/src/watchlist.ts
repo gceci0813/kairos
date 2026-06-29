@@ -23,10 +23,13 @@ export interface WatchItem {
 export async function listWatch(): Promise<WatchItem[]> {
   const redis = getRedis();
   if (!redis) return [];
-  const all = (await redis.hgetall<Record<string, string>>(KEY)) ?? {};
+  const all = (await redis.hgetall<Record<string, any>>(KEY)) ?? {};
   return Object.entries(all)
-    .map(([term, json]) => {
-      try { return JSON.parse(json) as WatchItem; } catch { return { term, kind: 'query' as const, addedAt: '' }; }
+    .map(([key, val]) => {
+      // @upstash/redis may return the value already parsed (object) or as a
+      // JSON string — handle both.
+      if (val && typeof val === 'object') return val as WatchItem;
+      try { return JSON.parse(val) as WatchItem; } catch { return { term: key, kind: 'query' as const, addedAt: '' }; }
     })
     .sort((a, b) => a.term.localeCompare(b.term));
 }
