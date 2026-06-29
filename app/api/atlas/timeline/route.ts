@@ -13,7 +13,8 @@ export async function GET(request: NextRequest) {
       topic: p.get('topic') || undefined,
       granularity: p.get('granularity') === 'hour' ? 'hour' : 'day',
     });
-    return NextResponse.json(result);
+    const { eventDebug } = await import('../../../src/events');
+    return NextResponse.json({ ...result, _debug: { ...eventDebug } });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Timeline failed';
     return NextResponse.json({ error: message }, { status: 500 });

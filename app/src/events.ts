@@ -29,48 +29,63 @@ interface FindingRow {
   sigma_messages: { posted_at: string | null; content: string | null } | null;
 }
 
+export const eventDebug = { rows: 0, withLocationEntity: 0, geocoded: 0, inWindow: 0 };
+
 export async function loadEvents(sinceDays: number, limit = 8000): Promise<GeoEvent[]> {
   const supabase = getSupabaseAdmin();
   if (!supabase) throw new Error('Supabase admin client not configured');
   await ensureCanonicalMap();
 
+  // No embedded join — fetch findings, then look up posted_at separately. The
+  // !inner embed silently returned nothing here; a plain select is robust.
   const { data, error } = await supabase
     .from('sigma_findings')
-    .select('msg_key, channel, entities, topics, sentiment_score, analyzed_at, sigma_messages!inner(posted_at, content)')
+    .select('msg_key, channel, entities, topics, sentiment_score, analyzed_at')
     .order('analyzed_at', { ascending: false })
     .limit(limit);
   if (error) throw new Error(error.message);
+  eventDebug.rows = (data ?? []).length;
 
-  const rawRows = (data ?? []) as any[];
-  // PostgREST may return an embedded to-one relation as an object or a
-  // single-element array — normalize.
-  const rows: FindingRow[] = rawRows.map((r) => ({
-    ...r,
-    sigma_messages: Array.isArray(r.sigma_messages) ? r.sigma_messages[0] : r.sigma_messages,
-  }));
+  const rows = (data ?? []) as any[];
   const sinceMs = Date.now() - sinceDays * 86400000;
 
+  // Fetch post dates + content snippets for these findings in one batched
+  // query (avoids the unreliable embedded join).
+  const keys = rows.map((r) => r.msg_key);
+  const msgByKey = new Map<string, { posted_at: string | null; content: string | null }>();
+  for (let i = 0; i < keys.length; i += 500) {
+    const slice = keys.slice(i, i + 500);
+    const { data: msgs } = await supabase
+      .from('sigma_messages')
+      .select('msg_key, posted_at, content')
+      .in('msg_key', slice);
+    for (const m of msgs ?? []) msgByKey.set((m as any).msg_key, { posted_at: (m as any).posted_at, content: (m as any).content });
+  }
+
   // Resolve all place names once via gazetteer + geocode cache.
-  const allNames = rows.flatMap((r) => (r.entities ?? []).filter((e) => e.type === 'location').map((e) => e.text));
+  const allNames = rows.flatMap((r) => (r.entities ?? []).filter((e: any) => e.type === 'location').map((e: any) => e.text));
   const geo = await resolvePlacesCached(allNames);
 
   const events: GeoEvent[] = [];
   for (const r of rows) {
-    // Event time = publication date when available, else when it was analyzed
-    // (many backfilled findings have null posted_at).
-    const eventDate = r.sigma_messages?.posted_at ?? r.analyzed_at;
-    if (!eventDate) continue;
+    const locs = (r.entities ?? []).filter((x: any) => x.type === 'location');
+    if (locs.length > 0) eventDebug.withLocationEntity++;
+
+    const msg = msgByKey.get(r.msg_key);
+    // Event time = publication date when available, else analysis date.
+    const eventDate = msg?.posted_at ?? r.analyzed_at;
     const ts = new Date(eventDate).getTime();
     if (isNaN(ts) || ts < sinceMs) continue;
+    eventDebug.inWindow++;
 
-    // One event per (finding, distinct place).
     const placesSeen = new Set<string>();
-    for (const e of (r.entities ?? []).filter((x) => x.type === 'location')) {
+    for (const e of locs) {
       const g: GeocodeResult | undefined = geo.get(e.text.trim());
       if (!g) continue;
       const place = g.displayName;
       if (placesSeen.has(place)) continue;
       placesSeen.add(place);
+      eventDebug.geocoded++;
       events.push({
         msgKey: r.msg_key,
         channel: r.channel,
@@ -78,9 +93,9 @@ export async function loadEvents(sinceDays: number, limit = 8000): Promise<GeoEv
         lat: g.lat,
         lon: g.lon,
         postedAt: new Date(ts).toISOString(),
-        topics: Array.from(new Set((r.topics ?? []).map((t) => canonicalizeEntity(t)))),
+        topics: Array.from(new Set((r.topics ?? []).map((t: string) => canonicalizeEntity(t)))),
         sentiment: r.sentiment_score,
-        snippet: (r.sigma_messages?.content ?? '').slice(0, 160),
+        snippet: (msg?.content ?? '').slice(0, 160),
       });
     }
   }
