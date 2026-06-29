@@ -28,10 +28,10 @@ interface NavItem {
 
 const baseNavItems: NavItem[] = [
   { label: 'Dashboard', href: '/dashboard', Icon: IconHome, sub: 'Main dashboard' },
-  { label: 'Analytics', href: '/dashboard/analytics', Icon: IconChartBar, sub: 'Data analytics & metrics' },
+  { label: 'Analytics', href: '/dashboard/political', Icon: IconChartBar, sub: 'Sentiment & forecasting' },
   { label: 'Map', href: '/dashboard/map', Icon: IconMap, sub: 'Interactive map view' },
-  { label: 'Network', href: '/dashboard/network', Icon: IconUsers, sub: 'Network analysis' },
-  { label: 'Activity', href: '/dashboard/activity', Icon: IconActivity, sub: 'Activity monitoring' },
+  { label: 'Network', href: '/dashboard/intel', Icon: IconUsers, sub: 'Entity network & briefings' },
+  { label: 'Activity', href: '/dashboard/live', Icon: IconActivity, sub: 'Real-time activity' },
   { label: 'Location Intelligence', href: '/location-test', Icon: IconLocation, sub: 'Geolocation analysis' },
   { label: 'Social Intel', href: '/dashboard/social-intel', Icon: IconSignalH, sub: 'Social Media Intelligence & Sentiment' },
   { label: 'ORACLE', href: '/dashboard/oracle', Icon: IconBrain, sub: 'Predictive analysis' },
