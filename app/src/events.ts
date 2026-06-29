@@ -36,17 +36,22 @@ export async function loadEvents(sinceDays: number, limit = 8000): Promise<GeoEv
   if (!supabase) throw new Error('Supabase admin client not configured');
   await ensureCanonicalMap();
 
-  // No embedded join — fetch findings, then look up posted_at separately. The
-  // !inner embed silently returned nothing here; a plain select is robust.
-  const { data, error } = await supabase
-    .from('sigma_findings')
-    .select('msg_key, channel, entities, topics, sentiment_score, analyzed_at')
-    .order('analyzed_at', { ascending: false })
-    .limit(limit);
-  if (error) throw new Error(error.message);
-  eventDebug.rows = (data ?? []).length;
-
-  const rows = (data ?? []) as any[];
+  // Supabase caps a single query at 1000 rows, so paginate with .range() to
+  // scan the whole corpus (location-bearing findings are spread throughout,
+  // not just in the newest 1000).
+  const rows: any[] = [];
+  for (let from = 0; from < limit; from += 1000) {
+    const { data, error } = await supabase
+      .from('sigma_findings')
+      .select('msg_key, channel, entities, topics, sentiment_score, analyzed_at')
+      .order('analyzed_at', { ascending: false })
+      .range(from, from + 999);
+    if (error) throw new Error(error.message);
+    if (!data || data.length === 0) break;
+    rows.push(...data);
+    if (data.length < 1000) break;
+  }
+  eventDebug.rows = rows.length;
   const sinceMs = Date.now() - sinceDays * 86400000;
 
   // Fetch post dates + content snippets for these findings in one batched
