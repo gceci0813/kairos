@@ -1,6 +1,7 @@
 import { detectAnomalies, regionalAssessments } from './oracle-analytics';
 import { emergingNarratives } from './emerging-narratives';
 import { trendDeviations } from './baseline';
+import { sentimentShifts } from './sentiment-shift';
 
 // Turns the analytics from reactive to proactive: evaluates current state
 // against thresholds and emits active alerts. Aggregate regions/narratives.
@@ -10,7 +11,7 @@ export type AlertSeverity = 'info' | 'warning' | 'critical';
 export interface Alert {
   id: string;
   severity: AlertSeverity;
-  category: 'risk' | 'anomaly' | 'emerging' | 'deviation';
+  category: 'risk' | 'anomaly' | 'emerging' | 'deviation' | 'sentiment';
   subject: string;
   message: string;
   value?: number;
@@ -29,14 +30,28 @@ export async function evaluateAlerts(config: AlertConfig = {}): Promise<{ genera
   const anomalyRatio = config.anomalyRatio ?? 2.5;
   const emergingGrowth = config.emergingGrowth ?? 3;
 
-  const [{ regions, narratives }, anomalies, emerging, deviations] = await Promise.all([
+  const [{ regions, narratives }, anomalies, emerging, deviations, shifts] = await Promise.all([
     regionalAssessments(windowDays),
     detectAnomalies(windowDays),
     emergingNarratives(windowDays),
     trendDeviations({ windowDays: Math.max(60, windowDays * 4), recentDays: Math.min(14, windowDays) }),
+    sentimentShifts({ windowDays: Math.max(60, windowDays * 4), recentDays: Math.min(14, windowDays) }),
   ]);
 
   const alerts: Alert[] = [];
+
+  // Sentiment direction flips / large tone swings.
+  for (const sh of [...shifts.regions, ...shifts.narratives]) {
+    if (!sh.flipped && Math.abs(sh.delta) < 0.4) continue;
+    alerts.push({
+      id: `sentiment-${sh.kind}-${sh.key}`,
+      severity: sh.flipped ? 'warning' : 'info',
+      category: 'sentiment',
+      subject: sh.key,
+      message: `${sh.kind} sentiment ${sh.direction}${sh.flipped ? ' (flipped sign)' : ''}: ${sh.priorSentiment} → ${sh.recentSentiment}`,
+      value: sh.delta,
+    });
+  }
 
   // Statistical deviations vs historical baseline (z-score spikes/drops).
   for (const dv of [...deviations.regions, ...deviations.narratives]) {
