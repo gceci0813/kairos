@@ -68,6 +68,7 @@ export default function IntelPage() {
   const [lookupLoading, setLookupLoading] = useState(false);
   const [watch, setWatch] = useState<any[]>([]);
   const [watchTerm, setWatchTerm] = useState('');
+  const [reliability, setReliability] = useState<any>(null);
 
   const loadWatch = useCallback(async () => {
     try {
@@ -102,7 +103,7 @@ export default function IntelPage() {
   const loadDash = useCallback(async () => {
     setLoading(true); setError('');
     try {
-      const [b, e, al, g, bl, ss, co, dg] = await Promise.all([
+      const [b, e, al, g, bl, ss, co, dg, sr] = await Promise.all([
         fetch('/api/intel/briefing?days=30').then((r) => r.json()),
         fetch('/api/intel/emerging?days=30').then((r) => r.json()),
         fetch('/api/intel/alerts?days=30').then((r) => r.json()),
@@ -111,9 +112,10 @@ export default function IntelPage() {
         fetch('/api/intel/sentiment-shift?window=730&recent=30').then((r) => r.json()),
         fetch('/api/intel/narrative-correlation?days=1825').then((r) => r.json()),
         fetch('/api/intel/digest?days=14').then((r) => r.json()),
+        fetch('/api/intel/source-reliability').then((r) => r.json()),
       ]);
       if (b.error) throw new Error(b.error);
-      setBriefing(b); setEmerging(e); setAlerts(al); setGraph(g); setBaseline(bl); setSentShift(ss); setCoMove(co); setDigest(dg);
+      setBriefing(b); setEmerging(e); setAlerts(al); setGraph(g); setBaseline(bl); setSentShift(ss); setCoMove(co); setDigest(dg); setReliability(sr);
     } catch (e: any) { setError(e.message); } finally { setLoading(false); }
   }, []);
 
@@ -198,6 +200,26 @@ export default function IntelPage() {
           </div>
         )}
       </div>
+
+      {/* Source reliability */}
+      {reliability?.sources?.length > 0 && (
+        <div className="bg-white border rounded-lg p-4 mb-6">
+          <h2 className="font-semibold mb-2">Source reliability</h2>
+          <p className="text-xs text-gray-400 mb-2">Rated by independent corroboration — how often a source's content is echoed by other sources.</p>
+          <div className="grid md:grid-cols-2 gap-x-6 gap-y-1 max-h-64 overflow-auto">
+            {reliability.sources.slice(0, 20).map((s: any) => {
+              const c: Record<string, string> = { high: 'bg-green-100 text-green-700', moderate: 'bg-blue-100 text-blue-700', low: 'bg-amber-100 text-amber-700', unverified: 'bg-slate-100 text-slate-500' };
+              return (
+                <div key={s.source} className="flex items-center gap-2 text-xs">
+                  <span className={`text-[10px] font-bold px-1.5 rounded ${c[s.rating]}`}>{s.rating}</span>
+                  <span className="flex-1 truncate">{s.source}</span>
+                  <span className="text-gray-400">{(s.corroborationRate * 100).toFixed(0)}% corrob · {s.messages} msgs</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Watchlist monitor */}
       <div className="bg-white border rounded-lg p-4 mb-6">
