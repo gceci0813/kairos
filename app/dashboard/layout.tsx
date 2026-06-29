@@ -74,13 +74,27 @@ export default function DashboardLayout({
   const router = useRouter();
 
   useEffect(() => {
-    // Temporarily set default user to bypass authentication
-    setUser({
-      username: 'admin',
-      role: 'administrator',
-      clearance: 'top_secret'
-    });
-  }, []);
+    // Verify user session
+    const verifySession = async () => {
+      try {
+        const response = await fetch('/api/auth/verify', {
+          method: 'POST'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          setUser(data.user);
+        } else {
+          router.push('/login');
+        }
+      } catch (error) {
+        router.push('/login');
+      }
+    };
+    
+    verifySession();
+  }, [router]);
 
   useEffect(() => {
     const activeParents = baseNavItems.filter(item => 

@@ -34,5 +34,10 @@
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "dependencies": {
+    "pg": "^1.11.3",
+    "recharts": "^2.8.0",
+    "crypto": "^3.0.1"
   }
 }
