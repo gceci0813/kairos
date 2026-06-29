@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from './supabase-admin';
 import { dedupFindings } from './entity-resolution';
+import { ownerGroup } from './source-identity';
 
 // Source-reliability scoring: rates each source (channel/outlet) by how often
 // its content is independently corroborated by OTHER sources. A source whose
@@ -53,16 +54,20 @@ export async function sourceReliability(limit = 6000): Promise<{ sources: Source
     perSource.get(src)!.messages++;
   }
 
-  // For each multi-source cluster, every member source gets credit:
-  // corroborated++ and += (otherSourceCount).
+  // For each cluster, corroboration only counts across DISTINCT OWNER GROUPS —
+  // duplicates posted across a source's own language/locale channels don't
+  // count as independent confirmation.
   for (const c of clusters) {
-    const sources = c.sources;
-    if (sources.length < 2) continue; // single-source = no corroboration
-    for (const src of sources) {
+    const owners = new Set(c.sources.map((s) => ownerGroup(s)));
+    if (owners.size < 2) continue; // same operator → not independent
+    for (const src of c.sources) {
       const s = perSource.get(src);
       if (!s) continue;
+      // Credit = number of OTHER owner groups in the cluster.
+      const otherOwners = owners.size - (owners.has(ownerGroup(src)) ? 1 : 0);
+      if (otherOwners <= 0) continue;
       s.corroborated++;
-      s.corrSourceSum += sources.length - 1;
+      s.corrSourceSum += otherOwners;
     }
   }
 

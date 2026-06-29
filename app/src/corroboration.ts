@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from './supabase-admin';
 import { dedupFindings } from './entity-resolution';
+import { distinctOwners } from './source-identity';
 
 // Cross-source corroboration: clusters near-duplicate reporting and scores
 // each event/claim by how many INDEPENDENT sources carry it. Core intel
@@ -58,12 +59,15 @@ export async function corroborate(query: string, sinceDays = 30, limit = 1000): 
   const events: CorroboratedEvent[] = clusters
     .map((c) => {
       const rep: any = c.representative;
+      // Count INDEPENDENT owners, not raw channels (language/locale variants of
+      // one operator don't independently confirm a claim).
+      const owners = distinctOwners(c.sources);
       return {
         summary: (rep.content as string).slice(0, 200),
         reportCount: c.size,
-        sourceCount: c.sources.length,
+        sourceCount: owners,
         sources: c.sources.slice(0, 10),
-        corroboration: level(c.sources.length),
+        corroboration: level(owners),
         url: rep.url ?? undefined,
         sampleSentiment: sentByKey.get(rep.msg_key),
       };
