@@ -56,7 +56,9 @@ const baseNavItems: NavItem[] = [
   { label: 'Intelligence Fusion', href: '/dashboard/fusion', Icon: IconBrain, sub: 'Multi-source intelligence fusion' },
   { label: 'Threat Assessment', href: '/dashboard/threat', Icon: IconEye, sub: 'Comprehensive threat analysis' },
   { label: 'Operations', href: '/dashboard/operations', Icon: IconActivity, sub: 'Command and control' },
-  { label: 'Asset Management', href: '/dashboard/assets', Icon: IconChartBar, sub: 'Resource allocation' }
+  { label: 'Asset Management', href: '/dashboard/assets', Icon: IconChartBar, sub: 'Resource allocation' },
+  { label: 'License Management', href: '/dashboard/licenses', Icon: IconChartBar, sub: 'License generation & tracking' },
+  { label: 'Client Management', href: '/dashboard/clients', Icon: IconUsers, sub: 'Client accounts & support' }
 ];
 
 export default function DashboardLayout({
