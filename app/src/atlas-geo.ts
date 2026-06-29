@@ -1,6 +1,7 @@
 import { getSupabaseAdmin } from './supabase-admin';
 import { GeoPoint, lookupPlace, GAZETTEER } from './atlas-gazetteer';
 import { ensureCanonicalMap } from './entity-canonical';
+import { resolvePlacesCached, GeocodeResult } from './geocoder';
 
 export type GeoLevel = 'all' | 'country' | 'city';
 
@@ -84,13 +85,25 @@ export async function geographicDensity(
 ): Promise<DensityFeature[]> {
   const findings = await loadFindings(query, sinceDays);
 
+  // Resolve all location names up front: static gazetteer + geocode cache.
+  // Geocoded (non-gazetteer) places have no country rollup, so they appear at
+  // 'all'/'city' levels.
+  const allNames = findings.flatMap((f) => (f.entities ?? []).filter((e) => e.type === 'location').map((e) => e.text));
+  const geo = await resolvePlacesCached(allNames);
+
   const acc = new Map<string, { point: GeoPoint; mentions: number; sentSum: number; sentN: number; topics: Map<string, number> }>();
 
   for (const f of findings) {
     const locations = (f.entities ?? []).filter((e) => e.type === 'location');
     for (const loc of locations) {
-      const raw = lookupPlace(loc.text);
-      if (!raw) continue; // only map places we can position; unknown names skipped
+      let raw = lookupPlace(loc.text);
+      if (!raw) {
+        const g = geo.get(loc.text.trim());
+        if (g && g.source !== 'gazetteer') {
+          raw = { lat: g.lat, lon: g.lon, kind: g.kind, canonical: g.displayName };
+        }
+      }
+      if (!raw) continue; // unmappable place — skip
       const point = resolveForLevel(raw, level);
       if (!point) continue;
       const key = point.canonical;
