@@ -57,20 +57,26 @@ export default function IntelPage() {
   const [graph, setGraph] = useState<any>(null);
   const [query, setQuery] = useState('');
   const [corrob, setCorrob] = useState<any>(null);
+  const [baseline, setBaseline] = useState<any>(null);
+  const [sentShift, setSentShift] = useState<any>(null);
+  const [diffTopic, setDiffTopic] = useState('');
+  const [diffusion, setDiffusion] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const loadDash = useCallback(async () => {
     setLoading(true); setError('');
     try {
-      const [b, e, al, g] = await Promise.all([
+      const [b, e, al, g, bl, ss] = await Promise.all([
         fetch('/api/intel/briefing?days=30').then((r) => r.json()),
         fetch('/api/intel/emerging?days=30').then((r) => r.json()),
         fetch('/api/intel/alerts?days=30').then((r) => r.json()),
         fetch('/api/intel/graph?days=30').then((r) => r.json()),
+        fetch('/api/intel/baseline?window=730&recent=14').then((r) => r.json()),
+        fetch('/api/intel/sentiment-shift?window=730&recent=30').then((r) => r.json()),
       ]);
       if (b.error) throw new Error(b.error);
-      setBriefing(b); setEmerging(e); setAlerts(al); setGraph(g);
+      setBriefing(b); setEmerging(e); setAlerts(al); setGraph(g); setBaseline(bl); setSentShift(ss);
     } catch (e: any) { setError(e.message); } finally { setLoading(false); }
   }, []);
 
@@ -84,6 +90,17 @@ export default function IntelPage() {
       const d = await r.json();
       if (d.error) throw new Error(d.error);
       setCorrob(d);
+    } catch (e: any) { setError(e.message); } finally { setLoading(false); }
+  };
+
+  const runDiffusion = async () => {
+    if (!diffTopic.trim()) return;
+    setLoading(true); setError('');
+    try {
+      const r = await fetch(`/api/intel/diffusion?topic=${encodeURIComponent(diffTopic.trim())}&days=1825`);
+      const d = await r.json();
+      if (d.error) throw new Error(d.error);
+      setDiffusion(d);
     } catch (e: any) { setError(e.message); } finally { setLoading(false); }
   };
 
@@ -106,6 +123,7 @@ export default function IntelPage() {
               return (
                 <div key={a.id} className={`text-sm border rounded px-3 py-1.5 ${sev[a.severity]}`}>
                   <b className="uppercase text-[10px] mr-2">{a.severity}</b>
+                  <span className="text-[10px] uppercase text-gray-500 mr-2">{a.category}</span>
                   <b>{a.subject}</b> — {a.message}
                 </div>
               );
@@ -113,6 +131,78 @@ export default function IntelPage() {
           </div>
         </div>
       )}
+
+      <div className="grid md:grid-cols-2 gap-6 mb-6">
+        {/* Statistical deviations vs baseline */}
+        <div className="bg-white border rounded-lg p-4">
+          <h2 className="font-semibold mb-2">Baseline deviations (z-score)</h2>
+          <p className="text-xs text-gray-400 mb-2">Recent volume vs historical norm. |z|≥2 = abnormal.</p>
+          <div className="space-y-1 max-h-64 overflow-auto">
+            {[...(baseline?.regions || []), ...(baseline?.narratives || [])]
+              .sort((a: any, b: any) => Math.abs(b.z) - Math.abs(a.z)).slice(0, 12).map((d: any, i: number) => (
+              <div key={i} className="flex items-center gap-2 text-xs border rounded px-2 py-1">
+                <span className={`text-[10px] font-bold px-1.5 rounded ${d.direction === 'spike' ? 'bg-red-100 text-red-700' : d.direction === 'drop' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500'}`}>{d.direction}</span>
+                <span className="flex-1 truncate">{d.key} <span className="text-gray-400">({d.kind})</span></span>
+                <span className="font-bold">z={d.z}</span>
+              </div>
+            ))}
+            {!baseline && <p className="text-sm text-gray-400">Loading…</p>}
+          </div>
+        </div>
+
+        {/* Sentiment shifts */}
+        <div className="bg-white border rounded-lg p-4">
+          <h2 className="font-semibold mb-2">Sentiment shifts</h2>
+          <p className="text-xs text-gray-400 mb-2">Tone direction change, recent vs prior. ⚑ = sign flip.</p>
+          <div className="space-y-1 max-h-64 overflow-auto">
+            {[...(sentShift?.regions || []), ...(sentShift?.narratives || [])]
+              .sort((a: any, b: any) => Math.abs(b.delta) - Math.abs(a.delta)).slice(0, 12).map((s: any, i: number) => (
+              <div key={i} className="flex items-center gap-2 text-xs border rounded px-2 py-1">
+                <span className={`text-[10px] font-bold px-1.5 rounded ${s.direction === 'improving' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{s.flipped ? '⚑ ' : ''}{s.direction}</span>
+                <span className="flex-1 truncate">{s.key}</span>
+                <span className="text-gray-500">{s.priorSentiment.toFixed(2)}→{s.recentSentiment.toFixed(2)}</span>
+              </div>
+            ))}
+            {!sentShift && <p className="text-sm text-gray-400">Loading…</p>}
+          </div>
+        </div>
+      </div>
+
+      {/* Narrative diffusion */}
+      <div className="bg-white border rounded-lg p-4 mb-6">
+        <h2 className="font-semibold mb-2">Narrative diffusion</h2>
+        <div className="flex gap-2 mb-3">
+          <input value={diffTopic} onChange={(e) => setDiffTopic(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && runDiffusion()}
+            placeholder="Narrative/topic to trace (e.g. Sanctions, NATO, Military Conflict)…" className="flex-1 p-2 border rounded text-sm" />
+          <button onClick={runDiffusion} disabled={loading} className="px-3 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm">Trace</button>
+        </div>
+        {diffusion && (
+          <div className="text-sm">
+            {diffusion.totalMentions === 0 ? (
+              <p className="text-gray-500">No mentions of “{diffusion.topic}” in the corpus.</p>
+            ) : (
+              <>
+                <p className="text-xs text-gray-500 mb-2">
+                  {diffusion.totalMentions} mentions · reach {diffusion.reach.distinctSources} sources / {diffusion.reach.distinctRegions} regions · span {diffusion.span.days}d
+                  {diffusion.origin && <> · origin <b>{diffusion.origin.source}</b> ({diffusion.origin.firstSeen.slice(0, 10)})</>}
+                </p>
+                <div className="grid md:grid-cols-2 gap-3">
+                  <div>
+                    <h3 className="text-xs uppercase text-gray-400 mb-1">Source adoption order</h3>
+                    {diffusion.sources.slice(0, 8).map((s: any) => (
+                      <div key={s.source} className="text-xs flex justify-between"><span className="truncate">{s.source}</span><span className="text-gray-400">+{s.hoursAfterOrigin}h</span></div>
+                    ))}
+                  </div>
+                  <div>
+                    <h3 className="text-xs uppercase text-gray-400 mb-1">Regions reached (in order)</h3>
+                    <p className="text-xs text-gray-600">{diffusion.regions.map((r: any) => r.place).slice(0, 12).join(' → ')}</p>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+      </div>
 
       {graph?.nodes?.length > 0 && (
         <div className="bg-white border rounded-lg p-4 mb-6">
