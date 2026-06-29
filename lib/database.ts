@@ -1,4 +1,6 @@
-import { Pool } from 'pg';
+// Import pg with type assertion to handle the export mismatch
+const pg = require('pg');
+const { Pool } = pg as any;
 
 // Database connection configuration
 const pool = new Pool({
