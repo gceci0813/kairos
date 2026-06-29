@@ -1,5 +1,6 @@
 import { detectAnomalies, regionalAssessments } from './oracle-analytics';
 import { emergingNarratives } from './emerging-narratives';
+import { trendDeviations } from './baseline';
 
 // Turns the analytics from reactive to proactive: evaluates current state
 // against thresholds and emits active alerts. Aggregate regions/narratives.
@@ -9,7 +10,7 @@ export type AlertSeverity = 'info' | 'warning' | 'critical';
 export interface Alert {
   id: string;
   severity: AlertSeverity;
-  category: 'risk' | 'anomaly' | 'emerging';
+  category: 'risk' | 'anomaly' | 'emerging' | 'deviation';
   subject: string;
   message: string;
   value?: number;
@@ -28,13 +29,27 @@ export async function evaluateAlerts(config: AlertConfig = {}): Promise<{ genera
   const anomalyRatio = config.anomalyRatio ?? 2.5;
   const emergingGrowth = config.emergingGrowth ?? 3;
 
-  const [{ regions, narratives }, anomalies, emerging] = await Promise.all([
+  const [{ regions, narratives }, anomalies, emerging, deviations] = await Promise.all([
     regionalAssessments(windowDays),
     detectAnomalies(windowDays),
     emergingNarratives(windowDays),
+    trendDeviations({ windowDays: Math.max(60, windowDays * 4), recentDays: Math.min(14, windowDays) }),
   ]);
 
   const alerts: Alert[] = [];
+
+  // Statistical deviations vs historical baseline (z-score spikes/drops).
+  for (const dv of [...deviations.regions, ...deviations.narratives]) {
+    if (dv.direction === 'normal' || Math.abs(dv.z) < 3) continue;
+    alerts.push({
+      id: `deviation-${dv.kind}-${dv.key}`,
+      severity: Math.abs(dv.z) >= 5 ? 'warning' : 'info',
+      category: 'deviation',
+      subject: dv.key,
+      message: `${dv.kind} ${dv.direction} vs baseline (z=${dv.z}; recent avg ${dv.recentMean}/day vs ${dv.baselineMean})`,
+      value: dv.z,
+    });
+  }
 
   for (const r of [...regions, ...narratives]) {
     if (riskLevels.has(r.riskLevel)) {
