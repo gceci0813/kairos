@@ -6,38 +6,41 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "next lint"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.78.0",
-    "@supabase/ssr": "^0.9.0",
-    "@supabase/supabase-js": "^2.98.0",
-    "@tabler/icons-react": "^3.44.0",
-    "@upstash/redis": "^1.38.0",
-    "anthropic": "^0.0.0",
-    "cheerio": "^1.2.0",
-    "framer-motion": "^12.34.5",
-    "franc-min": "^6.2.0",
-    "lucide-react": "^0.576.0",
-    "next": "^16.2.9",
-    "react": "19.2.3",
-    "react-dom": "19.2.3",
-    "react-simple-maps": "^1.0.0",
-    "recharts": "^3.7.0"
+    "@tabler/icons-react": "^1^.19.0",
+    "@types/pg": "^2^.11.6",
+    "next": "16.2.9",
+    "pg": "^2^.13.0",
+    "react": "^3^.0.0",
+    "react-dom": "^3^.0.0",
+    "recharts": "^4^.13.3"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.1.6",
-    "tailwindcss": "^4",
-    "typescript": "^5"
+    "@types/node": "^3^.0.0",
+    "@types/react": "^3^.0.0",
+    "@types/react-dom": "^3^.0.0",
+    "eslint": "^5^.57.0",
+    "eslint-config-next": "16.2.9",
+    "typescript": "^6^.0.0"
   },
-  "dependencies": {
-    "pg": "^1.11.3",
-    "recharts": "^2.8.0",
-    "crypto": "^3.0.1"
-  }
+  "description": "This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "lib": "lib"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gceci0813/kairos.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/gceci0813/kairos/issues"
+  },
+  "homepage": "https://github.com/gceci0813/kairos#readme"
 }
