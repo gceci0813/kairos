@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getUserByUsername, updateUserLastLogin } from '@/lib/database';
+import { checkRateLimit, logAuditEvent } from '@/lib/security';
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,24 +13,53 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    const validCredentials = [
-      { username: 'admin', password: 'admin123', role: 'administrator', clearance: 'top_secret' },
-      { username: 'analyst', password: 'analyst123', role: 'analyst', clearance: 'secret' },
-      { username: 'operator', password: 'operator123', role: 'operator', clearance: 'confidential' }
-    ];
+    // Rate limiting
+    const clientIP = request.headers.get('x-forwarded-for') || 'unknown';
+    if (!checkRateLimit(`login:${clientIP}`, 5, 60000)) {
+      logAuditEvent('login_rate_limit_exceeded', 'unknown', { ip: clientIP });
+      return NextResponse.json(
+        { error: 'Too many login attempts. Please try again later.' },
+        { status: 429 }
+      );
+    }
     
-    const user = validCredentials.find(
-      cred => cred.username === username && cred.password === password
-    );
+    // Get user from database
+    const user = await getUserByUsername(username);
     
     if (!user) {
+      logAuditEvent('login_failed_invalid_user', username, { ip: clientIP });
       return NextResponse.json(
         { error: 'Invalid credentials' },
         { status: 401 }
       );
     }
     
+    // Simple password verification for demo purposes
+    // In production, use proper password hashing
+    const validCredentials = [
+      { username: 'admin', password: 'admin123' },
+      { username: 'analyst', password: 'analyst123' },
+      { username: 'operator', password: 'operator123' }
+    ];
+    
+    const validCredential = validCredentials.find(cred => cred.username === username && cred.password === password);
+    
+    if (!validCredential) {
+      logAuditEvent('login_failed_invalid_password', username, { ip: clientIP });
+      return NextResponse.json(
+        { error: 'Invalid credentials' },
+        { status: 401 }
+      );
+    }
+    
+    // Generate session token
     const sessionToken = Buffer.from(`${username}:${Date.now()}`).toString('base64');
+    
+    // Update last login
+    await updateUserLastLogin(username);
+    
+    // Log successful login
+    logAuditEvent('user_login', username, { ip: clientIP });
     
     const response = NextResponse.json({
       success: true,

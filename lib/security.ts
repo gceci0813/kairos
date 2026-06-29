@@ -2,55 +2,9 @@ import crypto from 'crypto';
 
 // Security utilities
 
-// Password hashing
-export async function hashPassword(password: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const salt = crypto.randomBytes(16).toString('hex');
-    crypto.pbkdf2(password, salt, 10000, 64, 'sha512', (err, derivedKey) => {
-      if (err) reject(err);
-      resolve(`${salt}:${derivedKey.toString('hex')}`);
-    });
-  });
-}
-
-export async function verifyPassword(password: string, hash: string): Promise<boolean> {
-  return new Promise((resolve, reject) => {
-    const [salt, key] = hash.split(':');
-    crypto.pbkdf2(password, salt, 10000, 64, 'sha512', (err, derivedKey) => {
-      if (err) reject(err);
-      resolve(key === derivedKey.toString('hex'));
-    });
-  });
-}
-
 // Token generation
 export function generateSecureToken(length: number = 32): string {
   return crypto.randomBytes(length).toString('hex');
-}
-
-// Data encryption
-export function encryptData(data: string, key: string): string {
-  const iv = crypto.randomBytes(16);
-  const cipher = crypto.createCipher('aes-256-cbc', key);
-  let encrypted = cipher.update(data, 'utf8', 'hex');
-  encrypted += cipher.final('hex');
-  return `${iv.toString('hex')}:${encrypted}`;
-}
-
-export function decryptData(encryptedData: string, key: string): string {
-  const [ivHex, encrypted] = encryptedData.split(':');
-  const iv = Buffer.from(ivHex, 'hex');
-  const decipher = crypto.createDecipher('aes-256-cbc', key);
-  let decrypted = decipher.update(encrypted, 'hex', 'utf8');
-  decrypted += decipher.final('utf8');
-  return decrypted;
-}
-
-// Input sanitization
-export function sanitizeInput(input: string): string {
-  return input
-    .replace(/[<>]/g, '') // Remove potential HTML tags
-    .trim();
 }
 
 // Rate limiting
