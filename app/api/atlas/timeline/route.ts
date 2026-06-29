@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
   try {
     const p = new URL(request.url).searchParams;
     const result = await eventTimeline({
-      sinceDays: Math.min(parseInt(p.get('days') || '30', 10) || 30, 365),
+      sinceDays: Math.min(parseInt(p.get('days') || '30', 10) || 30, 1825),
       place: p.get('place') || undefined,
       topic: p.get('topic') || undefined,
       granularity: p.get('granularity') === 'hour' ? 'hour' : 'day',

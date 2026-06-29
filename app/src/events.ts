@@ -40,7 +40,13 @@ export async function loadEvents(sinceDays: number, limit = 8000): Promise<GeoEv
     .limit(limit);
   if (error) throw new Error(error.message);
 
-  const rows = (data ?? []) as unknown as FindingRow[];
+  const rawRows = (data ?? []) as any[];
+  // PostgREST may return an embedded to-one relation as an object or a
+  // single-element array — normalize.
+  const rows: FindingRow[] = rawRows.map((r) => ({
+    ...r,
+    sigma_messages: Array.isArray(r.sigma_messages) ? r.sigma_messages[0] : r.sigma_messages,
+  }));
   const sinceMs = Date.now() - sinceDays * 86400000;
 
   // Resolve all place names once via gazetteer + geocode cache.

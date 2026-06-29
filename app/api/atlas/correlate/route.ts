@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
   try {
     const p = new URL(request.url).searchParams;
     const result = await correlateEvents({
-      sinceDays: Math.min(parseInt(p.get('days') || '30', 10) || 30, 365),
+      sinceDays: Math.min(parseInt(p.get('days') || '30', 10) || 30, 1825),
       maxHoursApart: Math.min(parseInt(p.get('maxHours') || '48', 10) || 48, 336),
       topic: p.get('topic') || undefined,
     });
