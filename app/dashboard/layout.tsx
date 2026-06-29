@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { 
   IconHome, 
   IconActivity,
@@ -15,7 +15,8 @@ import {
   IconSettings,
   IconMap,
   IconUsers,
-  IconChartBar
+  IconChartBar,
+  IconLogout
 } from '@tabler/icons-react';
 
 interface NavItem {
@@ -68,7 +69,32 @@ export default function DashboardLayout({
 }) {
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [user, setUser] = useState<any>(null);
   const pathname = usePathname();
+  const router = useRouter();
+
+  useEffect(() => {
+    // Verify user session
+    const verifySession = async () => {
+      try {
+        const response = await fetch('/api/auth/verify', {
+          method: 'POST'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          setUser(data.user);
+        } else {
+          router.push('/login');
+        }
+      } catch (error) {
+        router.push('/login');
+      }
+    };
+    
+    verifySession();
+  }, [router]);
 
   useEffect(() => {
     const activeParents = baseNavItems.filter(item => 
@@ -84,6 +110,18 @@ export default function DashboardLayout({
         ? prev.filter(item => item !== label)
         : [...prev, label]
     );
+  };
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', {
+        method: 'POST'
+      });
+      
+      router.push('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
 
   const NavItemComponent = ({ item, level = 0 }: { item: NavItem; level?: number }) => {
@@ -135,6 +173,17 @@ export default function DashboardLayout({
     );
   };
 
+  if (!user) {
+    return (
+      <div className="flex h-screen bg-gray-50 items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-screen bg-gray-50">
       <div className={`${sidebarOpen ? 'w-64' : 'w-16'} transition-all duration-300 bg-white shadow-md`}>
@@ -165,9 +214,20 @@ export default function DashboardLayout({
           </nav>
 
           <div className="p-4 border-t">
-            <div className="text-xs text-gray-500 text-center">
-              {sidebarOpen ? 'Kairos Intelligence Platform' : 'KAIROS'}
-            </div>
+            {sidebarOpen && (
+              <div className="space-y-2">
+                <div className="text-xs text-gray-500">
+                  {user.username} ({user.role})
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center text-xs text-gray-500 hover:text-gray-700"
+                >
+                  <IconLogout size={14} className="mr-1" />
+                  Logout
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
