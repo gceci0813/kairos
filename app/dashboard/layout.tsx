@@ -52,7 +52,9 @@ const baseNavItems: NavItem[] = [
   { label: 'Pattern Recognition', href: '/dashboard/recognition', Icon: IconEye, sub: 'Clearview-style recognition' },
   { label: 'Real-Time Intel', href: '/dashboard/realtime', Icon: IconActivity, sub: 'Live threat monitoring' },
   { label: 'Advanced Analytics', href: '/dashboard/analytics', Icon: IconChartBar, sub: 'Deep data analysis' },
-  { label: 'Predictive Intel', href: '/dashboard/predictive', Icon: IconBrain, sub: 'AI-powered predictions' }
+  { label: 'Predictive Intel', href: '/dashboard/predictive', Icon: IconBrain, sub: 'AI-powered predictions' },
+  { label: 'Intelligence Fusion', href: '/dashboard/fusion', Icon: IconBrain, sub: 'Multi-source intelligence fusion' },
+  { label: 'Threat Assessment', href: '/dashboard/threat', Icon: IconEye, sub: 'Comprehensive threat analysis' }
 ];
 
 export default function DashboardLayout({
