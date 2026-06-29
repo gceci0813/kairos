@@ -5,17 +5,17 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
   IconHome, 
-  IconChartBar, 
-  IconMap, 
-  IconUsers, 
-  IconSettings, 
   IconActivity,
+  IconBrain,
+  IconEye,
   IconSignalH,
   IconLocation,
   IconChevronDown,
   IconChevronRight,
-  IconBrain,
-  IconEye
+  IconSettings,
+  IconMap,
+  IconUsers,
+  IconChartBar
 } from '@tabler/icons-react';
 
 interface NavItem {
@@ -28,15 +28,25 @@ interface NavItem {
 
 const baseNavItems: NavItem[] = [
   { label: 'Dashboard', href: '/dashboard', Icon: IconHome, sub: 'Main dashboard' },
-  { label: 'Analytics', href: '/dashboard/analytics', Icon: IconChartBar, sub: 'Data analytics & metrics' },
-  { label: 'Map', href: '/dashboard/map', Icon: IconMap, sub: 'Interactive map view' },
-  { label: 'Network', href: '/dashboard/network', Icon: IconUsers, sub: 'Network analysis' },
-  { label: 'Activity', href: '/dashboard/activity', Icon: IconActivity, sub: 'Activity monitoring' },
-  { label: 'Location Intelligence', href: '/location-test', Icon: IconLocation, sub: 'Real geolocation analysis' },
-  { label: 'Social Intel', href: '/location-test/social-intel', Icon: IconSignalH, sub: 'Real-time social media intelligence' },
-  { label: 'ORACLE', href: '/dashboard/oracle', Icon: IconBrain, sub: 'Predictive analysis' },
-  { label: 'SIGMA', href: '/dashboard/sigma', Icon: IconEye, sub: 'Surveillance & monitoring' },
-  { label: 'Settings', href: '/dashboard/settings', Icon: IconSettings, sub: 'System settings' }
+  { label: 'Actor', href: '/dashboard/actor', Icon: IconUsers, sub: 'Profile management' },
+  { label: 'Admin', href: '/dashboard/admin', Icon: IconSettings, sub: 'System administration' },
+  { label: 'Atlas', href: '/dashboard/atlas', Icon: IconMap, sub: 'Mapping and visualization' },
+  { label: 'Documents', href: '/dashboard/documents', Icon: IconChartBar, sub: 'Document management' },
+  { label: 'Intel', href: '/dashboard/intel', Icon: IconBrain, sub: 'Intelligence reports' },
+  { label: 'Intelligence', href: '/dashboard/intelligence', Icon: IconBrain, sub: 'Data analysis' },
+  { label: 'Live', href: '/dashboard/live', Icon: IconActivity, sub: 'Real-time monitoring' },
+  { label: 'Map', href: '/dashboard/map', Icon: IconMap, sub: 'Geographic mapping' },
+  { label: 'Oracle', href: '/dashboard/oracle', Icon: IconBrain, sub: 'Predictive analytics' },
+  { label: 'Political', href: '/dashboard/political', Icon: IconSignalH, sub: 'Political analysis' },
+  { label: 'Profile', href: '/dashboard/profile', Icon: IconUsers, sub: 'User profiles' },
+  { label: 'Reports', href: '/dashboard/reports', Icon: IconChartBar, sub: 'Generated reports' },
+  { label: 'Sentinel', href: '/dashboard/sentinel', Icon: IconEye, sub: 'Security monitoring' },
+  { label: 'Settings', href: '/dashboard/settings', Icon: IconSettings, sub: 'System settings' },
+  { label: 'Sigma', href: '/dashboard/sigma', Icon: IconEye, sub: 'Surveillance system' },
+  { label: 'Social Intel', href: '/dashboard/social-intel', Icon: IconSignalH, sub: 'Social media intelligence' },
+  { label: 'Watchlist', href: '/dashboard/watchlist', Icon: IconActivity, sub: 'Target monitoring' },
+  { label: 'Location Intelligence', href: '/location-test', Icon: IconLocation, sub: 'Geolocation analysis' },
+  { label: 'Social Intel (Alt)', href: '/location-test/social-intel', Icon: IconSignalH, sub: 'Alternative social analysis' }
 ];
 
 export default function DashboardLayout({
