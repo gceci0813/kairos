@@ -62,13 +62,14 @@ export default function IntelPage() {
   const [diffTopic, setDiffTopic] = useState('');
   const [diffusion, setDiffusion] = useState<any>(null);
   const [coMove, setCoMove] = useState<any>(null);
+  const [digest, setDigest] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const loadDash = useCallback(async () => {
     setLoading(true); setError('');
     try {
-      const [b, e, al, g, bl, ss, co] = await Promise.all([
+      const [b, e, al, g, bl, ss, co, dg] = await Promise.all([
         fetch('/api/intel/briefing?days=30').then((r) => r.json()),
         fetch('/api/intel/emerging?days=30').then((r) => r.json()),
         fetch('/api/intel/alerts?days=30').then((r) => r.json()),
@@ -76,9 +77,10 @@ export default function IntelPage() {
         fetch('/api/intel/baseline?window=730&recent=14').then((r) => r.json()),
         fetch('/api/intel/sentiment-shift?window=730&recent=30').then((r) => r.json()),
         fetch('/api/intel/narrative-correlation?days=1825').then((r) => r.json()),
+        fetch('/api/intel/digest?days=14').then((r) => r.json()),
       ]);
       if (b.error) throw new Error(b.error);
-      setBriefing(b); setEmerging(e); setAlerts(al); setGraph(g); setBaseline(bl); setSentShift(ss); setCoMove(co);
+      setBriefing(b); setEmerging(e); setAlerts(al); setGraph(g); setBaseline(bl); setSentShift(ss); setCoMove(co); setDigest(dg);
     } catch (e: any) { setError(e.message); } finally { setLoading(false); }
   }, []);
 
@@ -115,6 +117,28 @@ export default function IntelPage() {
       <p className="text-sm text-gray-500 mb-6">Auto-briefing, emerging narratives, and cross-source corroboration. Aggregate regions/narratives.</p>
 
       {error && <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">{error}</div>}
+
+      {digest && (
+        <div className="bg-slate-900 text-slate-100 rounded-lg p-4 mb-6">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="font-bold text-base">What changed ({digest.itemCount})</h2>
+            <a href="/api/intel/digest?days=14&format=markdown" className="text-xs px-3 py-1 bg-slate-700 rounded hover:bg-slate-600">Export digest ↓</a>
+          </div>
+          <p className="text-sm text-slate-300 mb-3">{digest.headline}</p>
+          <div className="space-y-1 max-h-72 overflow-auto">
+            {(digest.items || []).slice(0, 15).map((it: any) => {
+              const c: Record<string, string> = { critical: 'text-red-400', warning: 'text-amber-400', info: 'text-blue-300' };
+              return (
+                <div key={it.rank} className="text-sm flex gap-2">
+                  <span className="text-slate-500 w-5 text-right">{it.rank}.</span>
+                  <span className={`text-[10px] uppercase font-bold ${c[it.severity]} w-16`}>{it.severity}</span>
+                  <span className="flex-1"><b>{it.headline}</b> <span className="text-slate-400">— {it.detail}</span></span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {alerts?.alerts?.length > 0 && (
         <div className="mb-6">
