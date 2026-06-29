@@ -21,6 +21,28 @@ function sentimentColor(s: number): string {
   return '#F59E0B';
 }
 
+function TimelineChart({ buckets }: { buckets: { bucket: string; count: number }[] }) {
+  if (!buckets.length) return <p className="text-xs text-gray-400">No events.</p>;
+  const w = 860, h = 90, pad = 4;
+  const max = Math.max(...buckets.map((b) => b.count), 1);
+  const bw = Math.max(1, (w - pad * 2) / buckets.length);
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} className="w-full" style={{ maxHeight: 110 }}>
+      {buckets.map((b, i) => {
+        const bh = (b.count / max) * (h - 16);
+        return (
+          <rect key={i} x={pad + i * bw} y={h - bh - 2} width={Math.max(0.8, bw - 0.5)} height={bh}
+            fill={b.count >= 2 * (max / buckets.length) ? '#EF4444' : '#3B82F6'} fillOpacity={0.8}>
+            <title>{b.bucket}: {b.count}</title>
+          </rect>
+        );
+      })}
+      <text x={pad} y={10} fontSize="9" fill="#94A3B8">{buckets[0]?.bucket}</text>
+      <text x={w - pad} y={10} fontSize="9" fill="#94A3B8" textAnchor="end">{buckets[buckets.length - 1]?.bucket}</text>
+    </svg>
+  );
+}
+
 export default function AtlasPage() {
   const [query, setQuery] = useState('');
   const [days, setDays] = useState(30);
@@ -30,6 +52,24 @@ export default function AtlasPage() {
   const [error, setError] = useState('');
   const [drill, setDrill] = useState<any>(null);
   const [drillLoading, setDrillLoading] = useState(false);
+  const [timeline, setTimeline] = useState<any>(null);
+  const [correlation, setCorrelation] = useState<any>(null);
+  const [eventsLoading, setEventsLoading] = useState(false);
+
+  const loadEvents = useCallback(async () => {
+    setEventsLoading(true);
+    try {
+      const [tl, co] = await Promise.all([
+        fetch(`/api/atlas/timeline?days=1825&granularity=day`).then((r) => r.json()),
+        fetch(`/api/atlas/correlate?days=1825&maxHours=72`).then((r) => r.json()),
+      ]);
+      setTimeline(tl); setCorrelation(co);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setEventsLoading(false);
+    }
+  }, []);
 
   const openDrill = useCallback(async (place: string) => {
     setDrillLoading(true);
@@ -158,6 +198,53 @@ export default function AtlasPage() {
             )}
           </button>
         ))}
+      </div>
+
+      {/* Event-level intelligence */}
+      <div className="mt-8 border-t pt-6">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-semibold">Event timeline & correlation</h2>
+          <div className="flex gap-2">
+            <a href="/api/atlas/heatmap?days=365&format=csv" className="text-xs px-3 py-1.5 bg-slate-700 text-white rounded hover:bg-slate-800">Export CSV ↓</a>
+            <a href="/api/atlas/heatmap?days=365&download=true" className="text-xs px-3 py-1.5 bg-slate-600 text-white rounded hover:bg-slate-700">Export GeoJSON ↓</a>
+            <button onClick={loadEvents} disabled={eventsLoading} className="text-xs px-3 py-1.5 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-400">
+              {eventsLoading ? 'Loading…' : 'Load events'}
+            </button>
+          </div>
+        </div>
+
+        {timeline && (
+          <div className="bg-white border rounded-lg p-4 mb-4">
+            <h3 className="text-sm font-semibold mb-2">Daily event volume ({timeline.events?.length ?? 0} recent events)</h3>
+            <TimelineChart buckets={timeline.buckets || []} />
+            {timeline.patterns?.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {timeline.patterns.slice(0, 8).map((p: any, i: number) => (
+                  <span key={i} className="text-xs bg-red-50 text-red-700 border border-red-200 px-2 py-0.5 rounded">
+                    burst {p.bucket} · {p.count} ({p.ratioToBaseline}×)
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {correlation && (
+          <div className="bg-white border rounded-lg p-4">
+            <h3 className="text-sm font-semibold mb-2">Cross-location event correlations ({correlation.links?.length ?? 0})</h3>
+            <div className="space-y-1 max-h-72 overflow-auto">
+              {(correlation.links || []).slice(0, 25).map((l: any, i: number) => (
+                <div key={i} className="flex items-center gap-2 text-xs border rounded px-2 py-1">
+                  <span className="font-medium">{l.a.place} ↔ {l.b.place}</span>
+                  <span className="text-gray-400">{l.hoursApart}h{l.km != null ? ` · ${l.km}km` : ''}</span>
+                  <span className="text-gray-500 flex-1 truncate">{l.sharedTopics.slice(0, 3).join(', ')}</span>
+                  <span className="font-bold text-blue-600">{(l.score * 100).toFixed(0)}%</span>
+                </div>
+              ))}
+              {correlation.links?.length === 0 && <p className="text-sm text-gray-500">No correlated events in window.</p>}
+            </div>
+          </div>
+        )}
       </div>
 
       {drill && (
