@@ -4,7 +4,6 @@ export async function POST(request: NextRequest) {
   try {
     const { username, password } = await request.json();
     
-    // Validate credentials
     if (!username || !password) {
       return NextResponse.json(
         { error: 'Username and password required' },
@@ -12,7 +11,6 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Check credentials against database
     const validCredentials = [
       { username: 'admin', password: 'admin123', role: 'administrator', clearance: 'top_secret' },
       { username: 'analyst', password: 'analyst123', role: 'analyst', clearance: 'secret' },
@@ -30,10 +28,8 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Generate session token
     const sessionToken = Buffer.from(`${username}:${Date.now()}`).toString('base64');
     
-    // Set session cookie
     const response = NextResponse.json({
       success: true,
       user: {
@@ -44,12 +40,10 @@ export async function POST(request: NextRequest) {
       token: sessionToken
     });
     
-    response.cookies.set({
-      name: 'kairos_session',
-      value: sessionToken,
+    response.cookies.set('kairos_session', sessionToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      maxAge: 60 * 60 * 24, // 24 hours
+      maxAge: 60 * 60 * 24,
       path: '/'
     });
     

@@ -11,13 +11,11 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Decode session token
     const decoded = Buffer.from(sessionToken, 'base64').toString('utf-8');
     const [username, timestamp] = decoded.split(':');
     
-    // Check if session is valid (24 hours)
     const sessionAge = Date.now() - parseInt(timestamp);
-    const maxAge = 24 * 60 * 60 * 1000; // 24 hours
+    const maxAge = 24 * 60 * 60 * 1000;
     
     if (sessionAge > maxAge) {
       return NextResponse.json(
@@ -26,7 +24,6 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Get user info
     const validCredentials = [
       { username: 'admin', role: 'administrator', clearance: 'top_secret' },
       { username: 'analyst', role: 'analyst', clearance: 'secret' },
