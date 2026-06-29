@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { franc } from 'franc-min';
 import { Entity, Language, NlpAnalysis, Sentiment } from './sigma-types';
 import { analyzeWithOllama, isOllamaConfigured } from './nlp-ollama';
+import { localAnalyze } from './local-nlp';
 
 const FRANC_TO_LANGUAGE: Record<string, Language> = {
   eng: 'en',
@@ -92,21 +93,12 @@ async function analyzeWithCloud(text: string): Promise<CloudAnalysisResult | nul
   }
 }
 
-function fallbackAnalysis(): CloudAnalysisResult {
-  return {
-    sentiment: 'neutral',
-    sentimentScore: 0,
-    entities: [],
-    topics: [],
-  };
-}
-
 export async function analyzeText(text: string): Promise<NlpAnalysis> {
   const language = detectLanguage(text);
 
-  // Hybrid tiering: prefer the local Ollama model when configured (cheap,
-  // private), fall back to the cloud provider on miss/error, then to neutral
-  // defaults if neither is available.
+  // Tiering: prefer local Ollama (cheap/private), then the cloud provider
+  // (best quality), then the local LLM-free analyzer (zero-cost, lower
+  // fidelity) so the corpus keeps growing even with no model / no credits.
   let result: CloudAnalysisResult | null = null;
   if (isOllamaConfigured()) {
     result = await analyzeWithOllama(text);
@@ -114,7 +106,9 @@ export async function analyzeText(text: string): Promise<NlpAnalysis> {
   if (!result) {
     result = await analyzeWithCloud(text);
   }
-  result = result ?? fallbackAnalysis();
+  if (!result) {
+    result = localAnalyze(text); // never null — real local fallback
+  }
 
   return {
     language,
